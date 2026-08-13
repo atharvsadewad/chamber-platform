@@ -256,7 +256,7 @@ function DraftFolder({
   node: DraftFolder;
   level: number;
 }) {
-  const [open, setOpen] = React.useState(level === 0);
+  const [open, setOpen] = React.useState(false);
 
   const fileCount = countFiles(node.children);
   const hasChildren = node.children.length > 0;
