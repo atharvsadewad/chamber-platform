@@ -24,7 +24,7 @@ export function DraftFolderRow({
   folder,
   level = 0,
 }: DraftFolderProps) {
-  const [open, setOpen] = React.useState(level === 0);
+  const [open, setOpen] = React.useState(false);
 
   const fileCount = countFiles(folder);
   const hasChildren = folder.children.length > 0;
