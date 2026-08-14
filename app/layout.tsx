@@ -11,28 +11,32 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://lawsandjudgments.in"),
 
   title: {
-    default: "Laws & Judgments",
+    default: "Laws & Judgments | Indian Legal Research Platform",
     template: "%s | Laws & Judgments",
   },
 
   description:
-    "India's modern legal research platform for Bare Acts, Judgments, Legal Drafting, AI-assisted legal research and legal procedures.",
+    "India's modern legal research platform for Bare Acts, Judgments, legal drafting, AI-assisted legal research, legal procedures and legal terminology.",
 
   keywords: [
+    "Indian legal research",
+    "Indian laws",
     "Bare Acts",
-    "Indian Laws",
-    "Judgments",
-    "Case Law",
-    "Supreme Court",
-    "High Court",
-    "Legal Research",
+    "Indian Bare Acts",
+    "Indian judgments",
+    "Supreme Court judgments",
+    "High Court judgments",
+    "case law",
+    "legal research",
     "BNS",
     "BNSS",
     "BSA",
-    "Legal AI",
-    "Legal Drafts",
-    "Law Students",
-    "Lawyers",
+    "legal AI",
+    "legal drafts",
+    "legal procedures",
+    "legal dictionary",
+    "law students",
+    "lawyers",
   ],
 
   authors: [
@@ -44,14 +48,22 @@ export const metadata: Metadata = {
   creator: "Laws & Judgments",
   publisher: "Laws & Judgments",
 
-  alternates: {
-    canonical: "https://lawsandjudgments.in",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 
   openGraph: {
-    title: "Laws & Judgments",
+    title: "Laws & Judgments | Indian Legal Research Platform",
     description:
-      "India's modern legal research platform for Acts, Judgments and AI-powered legal assistance.",
+      "Research Indian laws, Bare Acts, judgments, legal procedures, drafts and legal concepts from one unified platform.",
     url: "https://lawsandjudgments.in",
     siteName: "Laws & Judgments",
     locale: "en_IN",
@@ -68,8 +80,9 @@ export const metadata: Metadata = {
 
   twitter: {
     card: "summary_large_image",
-    title: "Laws & Judgments",
-    description: "India's modern legal research platform.",
+    title: "Laws & Judgments | Indian Legal Research Platform",
+    description:
+      "Research Indian laws, judgments, legal procedures and legal concepts from one unified platform.",
     images: ["/logo.png"],
   },
 
