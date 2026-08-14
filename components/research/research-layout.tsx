@@ -13,29 +13,19 @@ export function ResearchLayout({
 }: ResearchLayoutProps) {
   return (
     <section className="container-laws-and-judgments py-8">
-
-      <div className="grid gap-6 xl:grid-cols-[260px_1fr_360px]">
-
-        <aside>
-
+      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="min-w-0">
           {sidebar}
-
         </aside>
 
-        <main>
-
+        <main className="min-w-0">
           {content}
 
+          <div className="mt-8 lg:hidden">
+            {assistant}
+          </div>
         </main>
-
-        <aside className="hidden xl:block">
-
-          {assistant}
-
-        </aside>
-
       </div>
-
     </section>
   );
 }

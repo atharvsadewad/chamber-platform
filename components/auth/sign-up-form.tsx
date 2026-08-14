@@ -2,12 +2,24 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
 import { signUp } from "@/services/auth.service";
 import { SocialLogin } from "./social-login";
 
 export function SignUpForm() {
+  const searchParams = useSearchParams();
+
+  const nextParam = searchParams.get("next");
+
+  const next =
+    nextParam &&
+    nextParam.startsWith("/") &&
+    !nextParam.startsWith("//")
+      ? nextParam
+      : "/";
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,7 +48,7 @@ export function SignUpForm() {
     !loading;
 
   async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>
+    event: React.FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
 
@@ -51,23 +63,17 @@ export function SignUpForm() {
       const data = await signUp(
         email.trim(),
         password,
-        name.trim()
+        name.trim(),
+        next,
       );
 
-      /*
-       * Supabase normally returns a user with a null session
-       * when email confirmation is enabled.
-       *
-       * If identities is empty, the email may already belong
-       * to an existing account.
-       */
       if (
         data.user &&
         Array.isArray(data.user.identities) &&
         data.user.identities.length === 0
       ) {
         setErrorMessage(
-          "An account with this email address may already exist. Please sign in instead."
+          "An account with this email address may already exist. Please sign in instead.",
         );
         return;
       }
@@ -78,7 +84,7 @@ export function SignUpForm() {
         setErrorMessage(error.message);
       } else {
         setErrorMessage(
-          "Something went wrong while creating your account. Please try again."
+          "Something went wrong while creating your account. Please try again.",
         );
       }
     } finally {
@@ -120,7 +126,7 @@ export function SignUpForm() {
         </div>
 
         <Link
-          href="/auth/sign-in"
+          href={`/auth/sign-in?next=${encodeURIComponent(next)}`}
           className="flex h-12 w-full items-center justify-center rounded-md bg-primary px-7 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
         >
           Proceed to Sign In
@@ -141,7 +147,6 @@ export function SignUpForm() {
    */
   return (
     <div className="space-y-6">
-      {/* Heading */}
       <div className="space-y-2 text-center">
         <h2 className="text-2xl font-semibold tracking-tight">
           Create your account
@@ -283,14 +288,14 @@ export function SignUpForm() {
           >
             I agree to the{" "}
             <Link
-              href="/terms"
+              href={`/terms?next=${encodeURIComponent(next)}`}
               className="font-medium text-primary hover:underline"
             >
               Terms of Service
             </Link>{" "}
             and{" "}
             <Link
-              href="/privacy"
+              href={`/privacy?next=${encodeURIComponent(next)}`}
               className="font-medium text-primary hover:underline"
             >
               Privacy Policy
@@ -322,18 +327,20 @@ export function SignUpForm() {
           disabled={!canCreateAccount}
           className="flex h-12 w-full items-center justify-center rounded-md bg-primary px-7 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Creating Account..." : "Create Account"}
+          {loading
+            ? "Creating Account..."
+            : "Create Account"}
         </button>
       </form>
 
       {/* Social Login */}
-      <SocialLogin />
+      <SocialLogin next={next} />
 
       {/* Sign In */}
       <div className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link
-          href="/auth/sign-in"
+          href={`/auth/sign-in?next=${encodeURIComponent(next)}`}
           className="font-medium text-primary hover:underline"
         >
           Sign in

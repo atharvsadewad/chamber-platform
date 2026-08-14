@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
-  const query = searchParams.get("query");
+  const query = searchParams.get("query")?.trim();
 
   if (!query) {
     return NextResponse.json(
@@ -16,26 +16,33 @@ export async function GET(request: NextRequest) {
       },
       {
         status: 400,
-      }
+      },
     );
   }
 
   if (!env.indianKanoonApiKey) {
+    console.error(
+      "Judgment search service is unavailable: provider API key is not configured.",
+    );
+
     return NextResponse.json(
       {
         success: false,
-        error: "API_KEY_MISSING",
+        error: "SEARCH_SERVICE_UNAVAILABLE",
         message:
-          "Indian Kanoon API key has not been configured.",
+          "Search is temporarily unavailable. Please try again later.",
       },
       {
-        status: 501,
-      }
+        status: 503,
+      },
     );
   }
 
   /*
     Next Batch
+
+    The judgment search provider integration will be
+    connected here.
 
     const response =
       await indianKanoon.search(...)

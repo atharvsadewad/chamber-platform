@@ -2,22 +2,82 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, X, Sparkles } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Menu,
+  X,
+  Sparkles,
+  LogOut,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { NAVIGATION } from "@/config/navigation";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/providers/database/supabase";
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+
   const [open, setOpen] = React.useState(false);
+  const [authenticated, setAuthenticated] = React.useState(false);
+  const [authLoading, setAuthLoading] = React.useState(true);
+
+  /*
+   * Check the current Supabase session and keep the navbar
+   * synchronized whenever authentication changes.
+   */
+  React.useEffect(() => {
+    let mounted = true;
+
+    async function loadSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      setAuthenticated(Boolean(session?.user));
+      setAuthLoading(false);
+    }
+
+    loadSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!mounted) return;
+
+        setAuthenticated(Boolean(session?.user));
+        setAuthLoading(false);
+      },
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Close mobile menu whenever the route changes.
   React.useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  async function handleSignOut() {
+    try {
+      await supabase.auth.signOut();
+
+      setAuthenticated(false);
+
+      router.replace("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  }
 
   return (
     <header className="border-b border-border bg-background">
@@ -53,7 +113,7 @@ export function Navbar() {
                 "text-sm font-medium transition-colors",
                 pathname === link.href
                   ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {link.label}
@@ -74,27 +134,52 @@ export function Navbar() {
         <div className="hidden items-center gap-3 lg:flex">
           <ThemeToggle />
 
-          {/* Sign In */}
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-          >
-            <Link href="/auth/sign-in">
-              Sign In
-            </Link>
-          </Button>
+          {!authLoading && !authenticated && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+              >
+                <Link href="/auth/sign-in">
+                  Sign In
+                </Link>
+              </Button>
 
-          {/* Open Workspace */}
-          <Button
-            variant="accent"
-            size="sm"
-            asChild
-          >
-            <Link href="/auth/sign-up">
-              Open Workspace
-            </Link>
-          </Button>
+              <Button
+                variant="accent"
+                size="sm"
+                asChild
+              >
+                <Link href="/auth/sign-up">
+                  Open Workspace
+                </Link>
+              </Button>
+            </>
+          )}
+
+          {!authLoading && authenticated && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+              >
+                <Link href="/workspace">
+                  Workspace
+                </Link>
+              </Button>
+
+              <Button
+                variant="accent"
+                size="sm"
+                onClick={handleSignOut}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign out
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Controls */}
@@ -105,10 +190,14 @@ export function Navbar() {
             variant="ghost"
             size="icon"
             type="button"
-            aria-label={open ? "Close Menu" : "Open Menu"}
+            aria-label={
+              open ? "Close Menu" : "Open Menu"
+            }
             aria-expanded={open}
             aria-controls="mobile-nav"
-            onClick={() => setOpen((current) => !current)}
+            onClick={() =>
+              setOpen((current) => !current)
+            }
           >
             {open ? (
               <X className="h-5 w-5" />
@@ -139,7 +228,7 @@ export function Navbar() {
                   "rounded-lg px-4 py-3 text-sm font-medium transition-colors",
                   pathname === link.href
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                 )}
               >
                 {link.label}
@@ -158,29 +247,63 @@ export function Navbar() {
 
             {/* Mobile Auth Actions */}
             <div className="mt-5 flex flex-col gap-3 border-t border-border pt-5">
-              <Button
-                variant="outline"
-                asChild
-              >
-                <Link
-                  href="/auth/sign-in"
-                  onClick={() => setOpen(false)}
-                >
-                  Sign In
-                </Link>
-              </Button>
+              {!authLoading && !authenticated && (
+                <>
+                  <Button
+                    variant="outline"
+                    asChild
+                  >
+                    <Link
+                      href="/auth/sign-in"
+                      onClick={() =>
+                        setOpen(false)
+                      }
+                    >
+                      Sign In
+                    </Link>
+                  </Button>
 
-              <Button
-                variant="accent"
-                asChild
-              >
-                <Link
-                  href="/auth/sign-up"
-                  onClick={() => setOpen(false)}
-                >
-                  Open Workspace
-                </Link>
-              </Button>
+                  <Button
+                    variant="accent"
+                    asChild
+                  >
+                    <Link
+                      href="/auth/sign-up"
+                      onClick={() =>
+                        setOpen(false)
+                      }
+                    >
+                      Open Workspace
+                    </Link>
+                  </Button>
+                </>
+              )}
+
+              {!authLoading && authenticated && (
+                <>
+                  <Button
+                    variant="outline"
+                    asChild
+                  >
+                    <Link
+                      href="/workspace"
+                      onClick={() =>
+                        setOpen(false)
+                      }
+                    >
+                      Workspace
+                    </Link>
+                  </Button>
+
+                  <Button
+                    variant="accent"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </Button>
+                </>
+              )}
             </div>
           </nav>
         </div>

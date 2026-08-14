@@ -34,6 +34,27 @@ const MODE_MAP: Record<string, SearchMode> = {
   Subject: "subject",
 };
 
+const SEARCH_PLACEHOLDERS: Record<SearchMode, string> = {
+  act_name: "Search by Act name...",
+  section: "Search by section number...",
+  year: "Search by year...",
+  act_number: "Search by Act number...",
+  subject: "Search by subject...",
+};
+
+const SEARCH_GUIDANCE: Record<SearchMode, string> = {
+  act_name:
+    'Try an Act name such as "Bharatiya Nyaya Sanhita".',
+  section:
+    'Try a section number such as "103".',
+  year:
+    'Try a year such as "2023".',
+  act_number:
+    'Try an Act number such as "1".',
+  subject:
+    'Try a subject such as "criminal".',
+};
+
 export function BareActsSearch() {
   const [query, setQuery] = useState("");
   const [selectedMode, setSelectedMode] =
@@ -123,6 +144,10 @@ export function BareActsSearch() {
         MODE_MAP[item.value] === selectedMode
     )?.value;
 
+  const placeholder = selectedMode
+    ? SEARCH_PLACEHOLDERS[selectedMode]
+    : "Search Bare Acts, Rules, Sections, Notifications...";
+
   return (
     <section className="space-y-6">
 
@@ -133,6 +158,7 @@ export function BareActsSearch() {
 
           <Search
             className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
           />
 
           <input
@@ -142,10 +168,11 @@ export function BareActsSearch() {
               setQuery(event.target.value)
             }
             onKeyDown={handleKeyDown}
-            placeholder={
-              selectedMode
-                ? `Search by ${selectedModeLabel}...`
-                : "Search Bare Acts, Rules, Sections, Notifications..."
+            placeholder={placeholder}
+            aria-label={
+              selectedModeLabel
+                ? `Search by ${selectedModeLabel}`
+                : "Search Bare Acts"
             }
             className="h-14 w-full rounded-xl border border-border bg-card pl-14 pr-12 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
@@ -180,20 +207,18 @@ export function BareActsSearch() {
 
           {BARE_ACT_SEARCH_METHODS.map((item) => {
             const Icon = item.icon;
-
             const mode = MODE_MAP[item.value];
-            
+
             if (!mode) return null;
-            
+
             const isSelected = selectedMode === mode;
 
             return (
               <button
                 key={item.value}
                 type="button"
-                onClick={() =>
-                  handleModeSelect(mode)
-                }
+                onClick={() => handleModeSelect(mode)}
+                aria-pressed={isSelected}
                 className={`group rounded-xl border bg-card p-5 text-left transition-all ${
                   isSelected
                     ? "border-primary shadow-md"
@@ -239,7 +264,12 @@ export function BareActsSearch() {
 
           <button
             type="button"
-            onClick={() => setSelectedMode(null)}
+            onClick={() => {
+              setSelectedMode(null);
+              setResults([]);
+              setSearched(false);
+              setError("");
+            }}
             className="text-sm font-medium text-primary hover:underline"
           >
             Remove filter
@@ -263,6 +293,7 @@ export function BareActsSearch() {
                 <>
                   {results.length} result
                   {results.length === 1 ? "" : "s"} found
+
                   {selectedModeLabel && (
                     <>
                       {" "}
@@ -272,7 +303,9 @@ export function BareActsSearch() {
                       </span>
                     </>
                   )}
+
                   {" for "}
+
                   <span className="font-medium text-foreground">
                     "{query}"
                   </span>
@@ -306,18 +339,31 @@ export function BareActsSearch() {
             results.length === 0 && (
               <div className="rounded-2xl border border-border bg-card p-10 text-center">
 
-                <Search className="mx-auto h-8 w-8 text-muted-foreground" />
+                <Search
+                  className="mx-auto h-8 w-8 text-muted-foreground"
+                  aria-hidden="true"
+                />
 
                 <h3 className="mt-4 text-lg font-semibold">
-                  No results found
+                  No{" "}
+                  {selectedMode === "section"
+                    ? "sections"
+                    : selectedMode === "act_name"
+                    ? "Acts"
+                    : selectedMode === "year"
+                    ? "Acts"
+                    : selectedMode === "act_number"
+                    ? "Acts"
+                    : selectedMode === "subject"
+                    ? "results"
+                    : "results"}{" "}
+                  found
                 </h3>
 
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Try a different{" "}
-                  {selectedModeLabel
-                    ? selectedModeLabel.toLowerCase()
-                    : "search term"}
-                  .
+                  {selectedMode
+                    ? SEARCH_GUIDANCE[selectedMode]
+                    : "Try a different search term or use one of the search filters above."}
                 </p>
 
               </div>

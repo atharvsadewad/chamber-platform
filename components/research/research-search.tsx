@@ -1,115 +1,235 @@
 "use client";
 
-import { Search, SlidersHorizontal } from "lucide-react";
-import { useState } from "react";
+import {
+  Search,
+  UserRound,
+  Quote,
+  BookOpen,
+  Tags,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
-const SCOPES = [
-  "All",
-  "Bare Acts",
-  "Judgments",
-  "Sections",
-  "AI",
+export type SearchMode =
+  | "keyword"
+  | "party"
+  | "citation"
+  | "bare-act"
+  | "section"
+  | null;
+
+interface ResearchSearchProps {
+  query: string;
+  searchMode: SearchMode;
+  onSearch: (
+    query: string,
+    mode: SearchMode,
+  ) => void;
+  onClear: () => void;
+  loading: boolean;
+}
+
+const SEARCH_TYPES: {
+  value: Exclude<SearchMode, null>;
+  label: string;
+  icon: typeof Search;
+}[] = [
+  {
+    value: "keyword",
+    label: "Keyword",
+    icon: Search,
+  },
+  {
+    value: "party",
+    label: "Party Name",
+    icon: UserRound,
+  },
+  {
+    value: "citation",
+    label: "Citation",
+    icon: Quote,
+  },
+  {
+    value: "bare-act",
+    label: "Bare Act",
+    icon: BookOpen,
+  },
+  {
+    value: "section",
+    label: "Section",
+    icon: Tags,
+  },
 ];
 
-const TRENDING = [
-  "Article 21",
-  "BNS Section 302",
-  "Cheque Bounce",
-  "Motor Vehicle Act",
-  "GST",
-];
+const PLACEHOLDERS: Record<
+  Exclude<SearchMode, null>,
+  string
+> = {
+  keyword: "Search laws, judgments, sections...",
+  party:
+    "Search by party name, e.g. State of Maharashtra...",
+  citation:
+    "Search by citation, e.g. (2014) 6 SCC 590...",
+  "bare-act": "Search a Bare Act by name...",
+  section:
+    "Search by section number or text...",
+};
 
-export function ResearchSearch() {
-  const [scope, setScope] = useState("All");
+export function ResearchSearch({
+  query,
+  searchMode,
+  onSearch,
+  onClear,
+  loading,
+}: ResearchSearchProps) {
+  const [input, setInput] = useState(query);
+
+  useEffect(() => {
+    setInput(query);
+  }, [query]);
+
+  function submitSearch() {
+    const trimmed = input.trim();
+
+    if (!trimmed) return;
+
+    onSearch(trimmed, searchMode);
+  }
+
+  function handleKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitSearch();
+    }
+  }
+
+  const placeholder =
+    searchMode === null
+      ? "Search laws, judgments, sections and legal material..."
+      : PLACEHOLDERS[searchMode];
 
   return (
-    <div className="space-y-6">
-
-      {/* Heading */}
-
+    <section>
       <div>
-
-        <h1 className="text-3xl font-bold tracking-tight">
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary">
           Legal Research
-        </h1>
-
-        <p className="mt-2 text-muted-foreground">
-          Search across Bare Acts, Judgments, Sections, Drafts and Legal
-          Dictionary.
         </p>
 
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+          Search Indian legal material
+        </h1>
+
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+          Search judgments, Bare Acts and sections from one
+          research workspace.
+        </p>
       </div>
 
-      {/* Search */}
+      <div className="mt-7">
+        {/* Search input */}
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
 
-      <div className="rounded-2xl border border-border bg-card p-6">
+            <input
+              type="search"
+              value={input}
+              onChange={(event) =>
+                setInput(event.target.value)
+              }
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder}
+              disabled={loading}
+              className="h-12 w-full rounded-xl border border-input bg-background pl-12 pr-11 text-sm text-foreground outline-none transition focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+              aria-label="Legal research search"
+            />
 
-        <div className="flex items-center gap-4 rounded-xl border border-border px-5 py-4">
-
-          <Search className="h-5 w-5 text-muted-foreground" />
-
-          <input
-            placeholder="Search laws, judgments, sections..."
-            className="flex-1 bg-transparent outline-none"
-          />
-
-          <button className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-
-            Search
-
-          </button>
-
-        </div>
-
-        {/* Scope */}
-
-        <div className="mt-5 flex flex-wrap gap-3">
-
-          {SCOPES.map((item) => (
-
-            <button
-              key={item}
-              onClick={() => setScope(item)}
-              className={`rounded-full px-4 py-2 text-sm transition ${
-                scope === item
-                  ? "bg-primary text-primary-foreground"
-                  : "border border-border hover:bg-secondary"
-              }`}
-            >
-              {item}
-            </button>
-
-          ))}
-
-        </div>
-
-      </div>
-
-      {/* Trending */}
-
-      <div className="flex flex-wrap items-center gap-3">
-
-        <div className="flex items-center gap-2 text-sm font-medium">
-
-          <SlidersHorizontal className="h-4 w-4" />
-
-          Trending
-
-        </div>
-
-        {TRENDING.map((item) => (
+            {input && !loading && (
+              <button
+                type="button"
+                onClick={() => {
+                  setInput("");
+                  onClear();
+                }}
+                aria-label="Clear search"
+                className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
 
           <button
-            key={item}
-            className="rounded-full border border-border px-4 py-2 text-sm transition hover:bg-secondary"
+            type="button"
+            onClick={submitSearch}
+            disabled={loading || !input.trim()}
+            className="h-12 rounded-xl bg-primary px-7 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {item}
+            {loading ? "Searching..." : "Search"}
           </button>
+        </div>
 
-        ))}
+        {/* Search type */}
+        <div className="mt-5">
+          <div className="mb-2 text-xs font-medium text-muted-foreground">
+            Search by
+            {searchMode === null && (
+              <span className="ml-2 font-normal">
+                · All legal material
+              </span>
+            )}
+          </div>
 
+          <div className="flex flex-wrap gap-2">
+            {SEARCH_TYPES.map((item) => {
+              const Icon = item.icon;
+              const active =
+                searchMode === item.value;
+
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => {
+                    if (active) {
+                      // Clicking the active filter again
+                      // returns to general search.
+                      onSearch(input, null);
+                    } else {
+                      onSearch(input, item.value);
+                    }
+                  }}
+                  className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-background text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Mode-specific helper text */}
+        {searchMode === "party" && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Search using the names of parties involved in a
+            case.
+          </p>
+        )}
+
+        {searchMode === "citation" && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Enter a recognised legal citation to find the
+            corresponding judgment.
+          </p>
+        )}
       </div>
-
-    </div>
+    </section>
   );
 }

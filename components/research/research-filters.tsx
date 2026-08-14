@@ -1,49 +1,41 @@
 "use client";
 
-const FILTERS = [
-  "Supreme Court",
-  "High Courts",
-  "District Courts",
-  "Tribunals",
-];
+interface ResearchFiltersProps {
+  visible: boolean;
+}
 
-export function ResearchFilters() {
+export function ResearchFilters({
+  visible,
+}: ResearchFiltersProps) {
+  if (!visible) {
+    return null;
+  }
+
   return (
-    <div className="mt-6 rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border bg-card/60 p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm font-medium">
+          Refine results
+        </span>
 
-      <div className="flex flex-wrap gap-3">
+        <select
+          aria-label="Sort results"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          defaultValue="relevance"
+        >
+          <option value="relevance">
+            Relevance
+          </option>
 
-        <select className="rounded-xl border border-border bg-background px-4 py-2 text-sm">
-          <option>Court</option>
-          {FILTERS.map(item => (
-            <option key={item}>{item}</option>
-          ))}
+          <option value="latest">
+            Latest first
+          </option>
+
+          <option value="oldest">
+            Oldest first
+          </option>
         </select>
-
-        <select className="rounded-xl border border-border bg-background px-4 py-2 text-sm">
-          <option>Year</option>
-          <option>2025</option>
-          <option>2024</option>
-          <option>2023</option>
-        </select>
-
-        <select className="rounded-xl border border-border bg-background px-4 py-2 text-sm">
-          <option>Act</option>
-        </select>
-
-        <select className="rounded-xl border border-border bg-background px-4 py-2 text-sm">
-          <option>Judge</option>
-        </select>
-
-        <select className="rounded-xl border border-border bg-background px-4 py-2 text-sm">
-          <option>Sort</option>
-          <option>Relevance</option>
-          <option>Newest</option>
-          <option>Oldest</option>
-        </select>
-
       </div>
-
     </div>
   );
 }

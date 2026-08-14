@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, MailCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  MailCheck,
+} from "lucide-react";
 import { useState } from "react";
 
 import { AuthCard } from "@/components/auth/auth-card";
@@ -12,16 +15,30 @@ import { resendVerificationEmail } from "@/services/auth.service";
 export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
 
-  const verified = searchParams.get("verified") === "true";
+  const verified =
+    searchParams.get("verified") === "true";
+
+  const nextParam = searchParams.get("next");
+
+  const next =
+    nextParam &&
+    nextParam.startsWith("/") &&
+    !nextParam.startsWith("//")
+      ? nextParam
+      : "/";
 
   const [email, setEmail] = useState("");
-  const [resending, setResending] = useState(false);
-  const [resent, setResent] = useState(false);
+  const [resending, setResending] =
+    useState(false);
+  const [resent, setResent] =
+    useState(false);
   const [error, setError] = useState("");
 
   async function handleResend() {
     if (!email.trim()) {
-      setError("Enter your email address to resend the verification email.");
+      setError(
+        "Enter your email address to resend the verification email.",
+      );
       return;
     }
 
@@ -30,7 +47,11 @@ export default function VerifyEmailPage() {
     setResent(false);
 
     try {
-      await resendVerificationEmail(email.trim());
+      await resendVerificationEmail(
+        email.trim(),
+        next,
+      );
+
       setResent(true);
     } catch (error) {
       setError(
@@ -61,13 +82,16 @@ export default function VerifyEmailPage() {
                 </h2>
 
                 <p className="text-sm leading-6 text-muted-foreground">
-                  Your email address has been verified successfully.
-                  Your account is ready to use.
+                  Your email address has been
+                  verified successfully. Your account
+                  is ready to use.
                 </p>
               </div>
 
               <Link
-                href="/auth/sign-in"
+                href={`/auth/sign-in?next=${encodeURIComponent(
+                  next,
+                )}`}
                 className="flex h-12 w-full items-center justify-center rounded-md bg-primary px-7 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
               >
                 Proceed to Sign In
@@ -87,9 +111,10 @@ export default function VerifyEmailPage() {
                 </h2>
 
                 <p className="text-sm leading-6 text-muted-foreground">
-                  We&apos;ve sent a verification link to your email
-                  address. Please check your inbox and click the link
-                  to verify your account.
+                  We&apos;ve sent a verification link
+                  to your email address. Please check
+                  your inbox and click the link to verify
+                  your account.
                 </p>
               </div>
 
@@ -124,7 +149,8 @@ export default function VerifyEmailPage() {
 
               {resent && (
                 <p className="text-sm text-primary">
-                  Verification email sent successfully.
+                  Verification email sent
+                  successfully.
                 </p>
               )}
 
@@ -140,12 +166,14 @@ export default function VerifyEmailPage() {
               </button>
 
               <p className="text-xs text-muted-foreground">
-                Didn&apos;t receive the email? Check your spam or
-                junk folder.
+                Didn&apos;t receive the email? Check
+                your spam or junk folder.
               </p>
 
               <Link
-                href="/auth/sign-in"
+                href={`/auth/sign-in?next=${encodeURIComponent(
+                  next,
+                )}`}
                 className="block text-sm text-primary hover:underline"
               >
                 Return to Sign In
