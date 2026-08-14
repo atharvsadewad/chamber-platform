@@ -4,24 +4,49 @@ import { useState } from "react";
 
 import { ResearchLayout } from "@/components/research/research-layout";
 import { ResearchSidebar } from "@/components/research/research-sidebar";
-import { ResearchSearch, type SearchMode } from "@/components/research/research-search";
-import { ResearchResults, type ResearchResult } from "@/components/research/research-results";
+import {
+  ResearchSearch,
+  type SearchMode,
+} from "@/components/research/research-search";
+import {
+  ResearchResults,
+  type ResearchResult,
+} from "@/components/research/research-results";
 import { ResearchAIPanel } from "@/components/research/research-ai-panel";
 import { ResearchFilters } from "@/components/research/research-filters";
 
 export default function ResearchPage() {
   const [results, setResults] = useState<ResearchResult[]>([]);
   const [query, setQuery] = useState("");
-  const [searchMode, setSearchMode] = useState<SearchMode>("keyword");
+  const [searchMode, setSearchMode] =
+    useState<SearchMode>("all");
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
+
+  function handleModeChange(mode: SearchMode) {
+    /*
+     * "All" is the default universal search mode.
+     * If the component ever sends null, fall back to "all"
+     * instead of allowing the page state to become invalid.
+     */
+    setSearchMode(mode ?? "all");
+    setError("");
+  }
 
   async function handleSearch(
     searchQuery: string,
     mode: SearchMode,
   ) {
     const trimmedQuery = searchQuery.trim();
+
+    /*
+     * Normalize null to universal search.
+     */
+    const activeMode: Exclude<SearchMode, null> =
+      mode ?? "all";
+
+    setSearchMode(activeMode);
 
     if (!trimmedQuery) {
       setResults([]);
@@ -32,7 +57,6 @@ export default function ResearchPage() {
     }
 
     setQuery(trimmedQuery);
-    setSearchMode(mode);
     setSearched(true);
     setLoading(true);
     setError("");
@@ -42,14 +66,37 @@ export default function ResearchPage() {
       let response: Response;
 
       /*
-       * Judgment search is already represented by the existing
-       * judgment API. The backend currently returns an empty result
-       * set until the Indian Kanoon integration is completed.
+       * -------------------------------------------------------
+       * UNIVERSAL SEARCH
+       * -------------------------------------------------------
+       *
+       * Searches across the legal material database without
+       * requiring the user to select a category first.
        */
-      if (
-        mode === "keyword" ||
-        mode === "party" ||
-        mode === "citation"
+      if (activeMode === "all") {
+        response = await fetch(
+          `/api/search?q=${encodeURIComponent(
+            trimmedQuery,
+          )}&mode=all`,
+          {
+            method: "GET",
+            cache: "no-store",
+          },
+        );
+      }
+
+      /*
+       * -------------------------------------------------------
+       * JUDGMENT SEARCH
+       * -------------------------------------------------------
+       *
+       * Keyword, Party Name and Citation currently use the
+       * judgment search service.
+       */
+      else if (
+        activeMode === "keyword" ||
+        activeMode === "party" ||
+        activeMode === "citation"
       ) {
         response = await fetch(
           `/api/judgments/search?query=${encodeURIComponent(
@@ -60,22 +107,18 @@ export default function ResearchPage() {
             cache: "no-store",
           },
         );
-      } else {
-        /*
-         * Existing Chamber search API.
-         *
-         * Bare Act / Section and Subject are already supported
-         * by /api/search.
-         */
-        let apiMode: "act_name" | "section" | "subject";
+      }
 
-        if (mode === "bare-act") {
-          apiMode = "act_name";
-        } else if (mode === "section") {
-          apiMode = "section";
-        } else {
-          apiMode = "subject";
-        }
+      /*
+       * -------------------------------------------------------
+       * BARE ACT / SECTION SEARCH
+       * -------------------------------------------------------
+       */
+      else {
+        const apiMode =
+          activeMode === "bare-act"
+            ? "act_name"
+            : "section";
 
         response = await fetch(
           `/api/search?q=${encodeURIComponent(
@@ -99,13 +142,109 @@ export default function ResearchPage() {
       }
 
       /*
-       * Normalize the two current backend response shapes into
-       * the single shape consumed by the Research results UI.
+       * -------------------------------------------------------
+       * UNIVERSAL SEARCH RESULTS
+       * -------------------------------------------------------
+       *
+       * The backend may return mixed legal material.
        */
-      if (
-        mode === "keyword" ||
-        mode === "party" ||
-        mode === "citation"
+      if (activeMode === "all") {
+        const universalResults = Array.isArray(
+          payload.data,
+        )
+          ? payload.data
+          : Array.isArray(payload.data?.results)
+            ? payload.data.results
+            : [];
+
+        setResults(
+          universalResults.map(
+            (
+              item: Record<string, unknown>,
+              index: number,
+            ) => {
+              const type = String(
+                item.type ??
+                  item.result_type ??
+                  "act",
+              ).toLowerCase();
+
+              return {
+                id: String(
+                  item.id ??
+                    item.document_id ??
+                    item.act_id ??
+                    index,
+                ),
+
+                type:
+                  type === "judgment"
+                    ? "judgment"
+                    : type === "section"
+                      ? "section"
+                      : "act",
+
+                title: String(
+                  item.title ??
+                    item.name ??
+                    item.act_name ??
+                    "Untitled",
+                ),
+
+                source: String(
+                  item.source ??
+                    item.court ??
+                    (type === "judgment"
+                      ? "Judgment"
+                      : type === "section"
+                        ? "Section"
+                        : "Bare Act"),
+                ),
+
+                year: String(
+                  item.year ??
+                    item.date ??
+                    "",
+                ),
+
+                summary: String(
+                  item.summary ??
+                    item.description ??
+                    item.content ??
+                    item.snippet ??
+                    "",
+                ),
+
+                tags: item.subject
+                  ? [String(item.subject)]
+                  : [],
+
+                section: item.section
+                  ? String(item.section)
+                  : undefined,
+
+                actName: item.act_name
+                  ? String(item.act_name)
+                  : undefined,
+
+                actNumber: item.act_number
+                  ? String(item.act_number)
+                  : undefined,
+              };
+            },
+          ),
+        );
+      }
+
+      /*
+       * -------------------------------------------------------
+       * JUDGMENT RESULTS
+       * -------------------------------------------------------
+       */
+      else if (
+        activeMode === "keyword" ||
+        activeMode === "party" ||
+        activeMode === "citation"
       ) {
         const judgmentResults = Array.isArray(
           payload.data?.results,
@@ -115,41 +254,59 @@ export default function ResearchPage() {
 
         setResults(
           judgmentResults.map(
-            (item: Record<string, unknown>, index: number) => ({
+            (
+              item: Record<string, unknown>,
+              index: number,
+            ) => ({
               id: String(
                 item.id ??
                   item.docid ??
                   item.document_id ??
                   index,
               ),
+
               type: "judgment",
+
               title: String(
                 item.title ??
                   item.name ??
                   "Untitled judgment",
               ),
+
               source: String(
                 item.court ??
                   item.source ??
                   "Judgment",
               ),
+
               year: String(
                 item.year ??
                   item.date ??
                   "",
               ),
+
               summary: String(
                 item.summary ??
                   item.description ??
                   item.snippet ??
                   "",
               ),
+
               tags: [],
             }),
           ),
         );
-      } else {
-        const actResults = Array.isArray(payload.data)
+      }
+
+      /*
+       * -------------------------------------------------------
+       * BARE ACT / SECTION RESULTS
+       * -------------------------------------------------------
+       */
+      else {
+        const actResults = Array.isArray(
+          payload.data,
+        )
           ? payload.data
           : [];
 
@@ -159,35 +316,50 @@ export default function ResearchPage() {
               item: Record<string, unknown>,
               index: number,
             ) => ({
-              id: String(item.id ?? index),
+              id: String(
+                item.id ??
+                  item.act_id ??
+                  index,
+              ),
+
               type:
-                mode === "section"
+                activeMode === "section"
                   ? "section"
                   : "act",
+
               title: String(
                 item.title ??
                   item.act_name ??
                   "Untitled",
               ),
+
               source:
-                mode === "section"
+                activeMode === "section"
                   ? "Section"
                   : "Bare Act",
-              year: String(item.year ?? ""),
+
+              year: String(
+                item.year ?? "",
+              ),
+
               summary: String(
                 item.description ??
                   item.content ??
                   "",
               ),
+
               tags: item.subject
                 ? [String(item.subject)]
                 : [],
+
               section: item.section
                 ? String(item.section)
                 : undefined,
+
               actName: item.act_name
                 ? String(item.act_name)
                 : undefined,
+
               actNumber: item.act_number
                 ? String(item.act_number)
                 : undefined,
@@ -196,7 +368,10 @@ export default function ResearchPage() {
         );
       }
     } catch (searchError) {
-      console.error("Research search error:", searchError);
+      console.error(
+        "Research search error:",
+        searchError,
+      );
 
       setResults([]);
 
@@ -215,6 +390,12 @@ export default function ResearchPage() {
     setQuery("");
     setSearched(false);
     setError("");
+
+    /*
+     * Return the research interface to Universal Search
+     * after clearing the current research session.
+     */
+    setSearchMode("all");
   }
 
   return (
@@ -227,6 +408,7 @@ export default function ResearchPage() {
             query={query}
             searchMode={searchMode}
             onSearch={handleSearch}
+            onModeChange={handleModeChange}
             onClear={handleClear}
             loading={loading}
           />
@@ -242,7 +424,9 @@ export default function ResearchPage() {
           />
 
           <ResearchFilters
-            visible={searched && results.length > 0}
+            visible={
+              searched && results.length > 0
+            }
           />
         </div>
       }

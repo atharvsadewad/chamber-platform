@@ -16,37 +16,39 @@ const POPULAR_SEARCHES = [
 export function Hero() {
   return (
     <section className="relative overflow-hidden">
+      <div className="mx-auto w-full px-5 py-16 sm:px-8 lg:px-12 lg:py-20 xl:px-16">
+        <div className="mx-auto w-full max-w-[1400px] text-center">
 
-      {/* Background Glow */}
-
-      <div className="container-laws-and-judgments relative py-20 lg:py-28">
-
-        <div className="mx-auto max-w-5xl text-center">
-
+          {/* Eyebrow */}
           <Eyebrow className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2">
             <Scale className="h-4 w-4 text-primary" />
-            India's Modern Legal Research Platform
+            India's Next-Gen Legal Research Platform
           </Eyebrow>
 
-          <Display className="mt-8 text-balance">
-            Every Law. 
+          {/* Main Heading */}
+          <Display
+            className="mx-auto mt-8 max-w-[1400px] text-balance text-[clamp(3.5rem,5vw,5.5rem)] leading-[0.96] tracking-[-0.035em]"
+          >
+            Every Law.
             <span className="text-primary"> Every Judgment.</span>
             <br />
             One Platform.
           </Display>
 
-          <Lead className="mx-auto mt-8 max-w-3xl text-lg">
+          {/* Description */}
+          <Lead className="mx-auto mt-8 max-w-4xl text-lg">
             Search Bare Acts, Judgments, Legal Drafts, Procedures,
             Legal Dictionary and AI-powered legal explanations —
             all from one unified platform.
           </Lead>
 
-          <div className="mx-auto mt-12 max-w-3xl">
+          {/* Search */}
+          <div className="mx-auto mt-10 max-w-3xl">
             <SearchBar />
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-
+          {/* Popular Searches */}
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             {POPULAR_SEARCHES.map((item) => (
               <Link
                 key={item}
@@ -56,11 +58,10 @@ export function Hero() {
                 {item}
               </Link>
             ))}
-
           </div>
 
-          <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
-
+          {/* Primary Actions */}
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button size="lg" variant="accent" asChild>
               <Link href="/research">
                 Start Research
@@ -69,16 +70,14 @@ export function Hero() {
             </Button>
 
             <Button size="lg" variant="outline" asChild>
-              <Link href="/laws-and-judgments-ai">
+              <Link href="/ai">
                 <Sparkles className="mr-2 h-4 w-4" />
                 Try AI Assistant
               </Link>
             </Button>
-
           </div>
 
         </div>
-
       </div>
     </section>
   );

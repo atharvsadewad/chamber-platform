@@ -6,37 +6,43 @@ const FOOTER_COLUMNS = [
   {
     title: "Platform",
     links: [
-      { href: "/research", label: "Case research" },
-      { href: "/signals", label: "Citator signals" },
-      { href: "/dockets", label: "Docket tracking" },
-      { href: "/briefs", label: "Brief assembly" },
+      { href: "/research", label: "Research" },
+      { href: "/acts", label: "Bare Acts" },
+      { href: "/judgments", label: "Judgments" },
+      { href: "/drafts", label: "Legal Drafts" },
     ],
   },
   {
-    title: "Solutions",
+    title: "Legal Tools",
     links: [
-      { href: "/solutions/litigation", label: "Litigation" },
-      { href: "/solutions/in-house", label: "In-house counsel" },
-      { href: "/solutions/academia", label: "Academic access" },
-      { href: "/solutions/government", label: "Government" },
+      { href: "/procedures", label: "Procedures" },
+      { href: "/dictionary", label: "Legal Dictionary" },
+      {
+        href: "/laws-and-judgments-ai",
+        label: "AI Assistant",
+      },
+      { href: "/research", label: "Legal Search" },
     ],
   },
   {
-    title: "Company",
+    title: "Research",
     links: [
-      { href: "/about", label: "About" },
-      { href: "/careers", label: "Careers" },
-      { href: "/security", label: "Security" },
+      { href: "/research", label: "Search Legal Material" },
+      { href: "/acts", label: "Browse Acts" },
+      { href: "/judgments", label: "Browse Judgments" },
+      { href: "/dictionary", label: "Legal Terms" },
+    ],
+  },
+  {
+    title: "Laws & Judgments",
+    links: [
+      { href: "/", label: "Home" },
+      { href: "/research", label: "Research Workspace" },
+      {
+        href: "/laws-and-judgments-ai",
+        label: "AI Assistant",
+      },
       { href: "/contact", label: "Contact" },
-    ],
-  },
-  {
-    title: "Resources",
-    links: [
-      { href: "/docs", label: "Documentation" },
-      { href: "/changelog", label: "Changelog" },
-      { href: "/status", label: "System status" },
-      { href: "/support", label: "Support" },
     ],
   },
 ] as const;
@@ -56,15 +62,28 @@ export function Footer() {
               aria-hidden
               className="flex size-7 items-center justify-center rounded-sm bg-primary text-[13px] font-semibold text-primary-foreground"
             >
-              C
+              L
             </span>
+
             Laws & Judgments
           </Link>
+
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-            Primary-source legal research and citation analysis for counsel
-            who cite with precision.
+            A unified legal search and research platform for Acts,
+            Judgments, Drafts, Procedures, legal terminology and
+            AI-assisted legal research.
           </p>
-          <Citation className="mt-6 block">Laws & Judgments, Inc.</Citation>
+
+          <a
+            href="mailto:admin@lawsandjudgments.in"
+            className="mt-5 inline-block text-sm font-medium text-foreground transition-colors hover:text-primary"
+          >
+            admin@lawsandjudgments.in
+          </a>
+
+          <Citation className="mt-4 block">
+            Laws & Judgments
+          </Citation>
         </div>
 
         {FOOTER_COLUMNS.map((column) => (
@@ -72,9 +91,12 @@ export function Footer() {
             <h3 className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
               {column.title}
             </h3>
+
             <ul className="mt-4 flex flex-col gap-3">
               {column.links.map((link) => (
-                <li key={link.href}>
+                <li
+                  key={`${column.title}-${link.href}-${link.label}`}
+                >
                   <Link
                     href={link.href}
                     className="text-sm text-foreground/80 transition-colors hover:text-foreground"
@@ -93,6 +115,7 @@ export function Footer() {
           <p className="text-xs text-muted-foreground">
             © {year} Laws & Judgments. All rights reserved.
           </p>
+
           <div className="flex items-center gap-6">
             <Link
               href="/privacy"
@@ -100,6 +123,7 @@ export function Footer() {
             >
               Privacy policy
             </Link>
+
             <Link
               href="/terms"
               className="text-xs text-muted-foreground transition-colors hover:text-foreground"

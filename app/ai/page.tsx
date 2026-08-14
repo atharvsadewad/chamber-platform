@@ -41,7 +41,7 @@ function AIIcon({ className = "h-5 w-5" }: { className?: string }) {
       className={className}
     >
       <path d="M12 3l1.35 4.65L18 9l-4.65 1.35L12 15l-1.35-4.65L6 9l4.65-1.35L12 3Z" />
-      <path d="M19 14l.65 2.35L22 17l-2.35.65L19 20l-.65-2.35L16 17l2.35-.65L19 14Z" />
+      <path d="M19 14l.65 2.35L22 17l-2.35.65L19 14Z" />
     </svg>
   );
 }
@@ -306,7 +306,7 @@ export default function AIPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-80px)] min-h-[600px] overflow-hidden bg-[#faf9f6]">
+    <div className="flex h-[calc(100vh-80px)] min-h-[600px] overflow-hidden bg-background text-foreground">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <button
@@ -319,15 +319,15 @@ export default function AIPage() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[270px] flex-col border-r border-[#e6e0d8] bg-[#f7f5f1] transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-[270px] flex-col border-r border-border bg-secondary/30 transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-[#e6e0d8] px-4 py-4">
+        <div className="flex items-center justify-between border-b border-border px-4 py-4">
           <button
             type="button"
             onClick={startNewChat}
-            className="flex flex-1 items-center gap-2.5 rounded-lg border border-[#ddd6cd] bg-white px-3 py-2.5 text-sm font-medium text-[#34383d] transition hover:border-[#c9b8b1] hover:bg-[#fffefa]"
+            className="flex flex-1 items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-secondary/40"
           >
             <PlusIcon />
             New chat
@@ -336,14 +336,14 @@ export default function AIPage() {
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
-            className="ml-2 rounded-lg p-2 text-[#747b82] hover:bg-[#ebe7e1] lg:hidden"
+            className="ml-2 rounded-lg p-2 text-muted-foreground hover:bg-secondary lg:hidden"
           >
             ×
           </button>
         </div>
 
         <div className="flex-1 px-3 py-4">
-          <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#96928c]">
+          <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Recent chats
           </p>
 
@@ -351,7 +351,7 @@ export default function AIPage() {
             <div className="mt-3">
               <button
                 type="button"
-                className="w-full rounded-lg bg-[#ebe6df] px-3 py-2.5 text-left text-sm text-[#42474d]"
+                className="w-full rounded-lg bg-secondary px-3 py-2.5 text-left text-sm text-foreground"
               >
                 {messages.find((message) => message.role === "user")
                   ?.content.slice(0, 32) || "Current conversation"}
@@ -362,18 +362,19 @@ export default function AIPage() {
               </button>
             </div>
           ) : (
-            <p className="px-2 pt-3 text-xs leading-5 text-[#99958f]">
+            <p className="px-2 pt-3 text-xs leading-5 text-muted-foreground">
               Your conversations will appear here.
             </p>
           )}
         </div>
 
-        <div className="border-t border-[#e6e0d8] p-4">
-          <div className="rounded-lg bg-[#eeeae4] p-3">
-            <p className="text-xs font-medium text-[#565b60]">
+        <div className="border-t border-border p-4">
+          <div className="rounded-lg bg-secondary p-3">
+            <p className="text-xs font-medium text-foreground">
               Laws & Judgments AI
             </p>
-            <p className="mt-1 text-[11px] leading-4 text-[#8a8782]">
+
+            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
               Research assistance powered by AI.
             </p>
           </div>
@@ -383,26 +384,27 @@ export default function AIPage() {
       {/* Main chat */}
       <section className="flex min-w-0 flex-1 flex-col">
         {/* Chat header */}
-        <header className="flex h-[62px] shrink-0 items-center justify-between border-b border-[#e6e0d8] bg-[#faf9f6]/95 px-4 backdrop-blur sm:px-6">
+        <header className="flex h-[62px] shrink-0 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="rounded-lg p-2 text-[#656c73] hover:bg-[#eeeae4] lg:hidden"
+              className="rounded-lg p-2 text-muted-foreground hover:bg-secondary lg:hidden"
               aria-label="Open chat history"
             >
               <MenuIcon />
             </button>
 
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f0e5e2] text-[#861725]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <AIIcon className="h-4 w-4" />
             </div>
 
             <div>
-              <h1 className="text-sm font-semibold text-[#30353b]">
+              <h1 className="text-sm font-semibold text-foreground">
                 AI Assistant
               </h1>
-              <p className="text-[11px] text-[#92979c]">
+
+              <p className="text-[11px] text-muted-foreground">
                 Legal research assistant
               </p>
             </div>
@@ -411,7 +413,7 @@ export default function AIPage() {
           <button
             type="button"
             onClick={startNewChat}
-            className="hidden items-center gap-2 rounded-lg border border-[#ddd6cd] bg-white px-3 py-2 text-xs font-medium text-[#555b61] transition hover:bg-[#f5f2ed] sm:flex"
+            className="hidden items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition hover:bg-secondary sm:flex"
           >
             <PlusIcon />
             New chat
@@ -423,15 +425,15 @@ export default function AIPage() {
           {messages.length === 0 ? (
             <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center px-5 py-10 sm:px-8">
               <div className="mb-7 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f0e5e2] text-[#861725]">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <AIIcon className="h-6 w-6" />
                 </div>
 
-                <h2 className="text-2xl font-semibold tracking-[-0.02em] text-[#2e3338] sm:text-3xl">
+                <h2 className="text-2xl font-semibold tracking-[-0.02em] text-foreground sm:text-3xl">
                   How can I help?
                 </h2>
 
-                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#7b838b]">
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
                   Ask about Indian laws, provisions, judgments, or legal
                   concepts.
                 </p>
@@ -443,17 +445,17 @@ export default function AIPage() {
                     key={suggestion.title}
                     type="button"
                     onClick={() => sendMessage(suggestion.prompt)}
-                    className="group rounded-xl border border-[#e2dcd4] bg-white p-4 text-left transition hover:border-[#cdbab4] hover:bg-[#fffefa] hover:shadow-sm"
+                    className="group rounded-xl border border-border bg-card p-4 text-left transition hover:border-primary/50 hover:bg-secondary/30 hover:shadow-sm"
                   >
-                    <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-[#f1e5e2] text-[#861725]">
+                    <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <AIIcon className="h-4 w-4" />
                     </div>
 
-                    <p className="text-sm font-medium text-[#34393e]">
+                    <p className="text-sm font-medium text-foreground">
                       {suggestion.title}
                     </p>
 
-                    <p className="mt-1 text-xs leading-5 text-[#858c93]">
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       {suggestion.description}
                     </p>
                   </button>
@@ -472,7 +474,7 @@ export default function AIPage() {
                   }`}
                 >
                   {message.role === "assistant" && (
-                    <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f0e5e2] text-[#861725]">
+                    <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <AIIcon className="h-4 w-4" />
                     </div>
                   )}
@@ -480,15 +482,15 @@ export default function AIPage() {
                   <div
                     className={`max-w-[85%] ${
                       message.role === "user"
-                        ? "rounded-2xl rounded-br-md bg-[#861725] px-4 py-3 text-white"
+                        ? "rounded-2xl rounded-br-md bg-primary px-4 py-3 text-primary-foreground"
                         : "min-w-0 flex-1"
                     }`}
                   >
                     <div
                       className={`whitespace-pre-wrap text-[14px] leading-7 ${
                         message.role === "user"
-                          ? "text-white"
-                          : "text-[#34393e]"
+                          ? "text-primary-foreground"
+                          : "text-foreground"
                       }`}
                     >
                       {message.content}
@@ -500,7 +502,7 @@ export default function AIPage() {
                           type="button"
                           onClick={() => copyMessage(message)}
                           title="Copy"
-                          className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] text-[#858b91] transition hover:bg-[#eeeae4] hover:text-[#4d5359]"
+                          className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] text-muted-foreground transition hover:bg-secondary hover:text-foreground"
                         >
                           <CopyIcon />
                           {copiedId === message.id ? "Copied" : "Copy"}
@@ -510,7 +512,7 @@ export default function AIPage() {
                           type="button"
                           onClick={() => regenerate(message)}
                           title="Regenerate response"
-                          className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] text-[#858b91] transition hover:bg-[#eeeae4] hover:text-[#4d5359]"
+                          className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] text-muted-foreground transition hover:bg-secondary hover:text-foreground"
                         >
                           <RefreshIcon />
                           Regenerate
@@ -520,7 +522,7 @@ export default function AIPage() {
                   </div>
 
                   {message.role === "user" && (
-                    <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#d6a13a] text-[11px] font-semibold text-white sm:flex">
+                    <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground sm:flex">
                       You
                     </div>
                   )}
@@ -529,18 +531,20 @@ export default function AIPage() {
 
               {isThinking && (
                 <div className="mb-7 flex gap-3.5">
-                  <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f0e5e2] text-[#861725]">
+                  <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <AIIcon className="h-4 w-4" />
                   </div>
 
-                  <div className="flex items-center gap-1 rounded-xl bg-white px-4 py-3">
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8a8f94]" />
+                  <div className="flex items-center gap-1 rounded-xl bg-card px-4 py-3">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" />
+
                     <span
-                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8a8f94]"
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground"
                       style={{ animationDelay: "120ms" }}
                     />
+
                     <span
-                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8a8f94]"
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground"
                       style={{ animationDelay: "240ms" }}
                     />
                   </div>
@@ -553,10 +557,10 @@ export default function AIPage() {
         </div>
 
         {/* Composer */}
-        <div className="shrink-0 bg-gradient-to-t from-[#faf9f6] via-[#faf9f6] to-transparent px-4 pb-4 pt-3 sm:px-6 sm:pb-5">
+        <div className="shrink-0 bg-gradient-to-t from-background via-background to-transparent px-4 pb-4 pt-3 sm:px-6 sm:pb-5">
           <div className="mx-auto max-w-3xl">
             <form onSubmit={handleSubmit}>
-              <div className="rounded-2xl border border-[#dcd6ce] bg-white shadow-[0_2px_10px_rgba(40,35,30,0.04)] transition focus-within:border-[#bdaaa4]">
+              <div className="rounded-2xl border border-border bg-card shadow-[0_2px_10px_rgba(40,35,30,0.04)] transition focus-within:border-primary/40">
                 <textarea
                   ref={textareaRef}
                   value={input}
@@ -565,7 +569,7 @@ export default function AIPage() {
                   rows={1}
                   disabled={isThinking}
                   placeholder="Ask a legal question..."
-                  className="block max-h-[180px] min-h-[50px] w-full resize-none bg-transparent px-4 pb-2 pt-3.5 text-sm leading-6 text-[#30353b] outline-none placeholder:text-[#a1a6ab] disabled:opacity-60"
+                  className="block max-h-[180px] min-h-[50px] w-full resize-none bg-transparent px-4 pb-2 pt-3.5 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-60"
                 />
 
                 <div className="flex items-center justify-between px-2.5 pb-2.5">
@@ -573,7 +577,7 @@ export default function AIPage() {
                     <button
                       type="button"
                       title="Attach a file"
-                      className="rounded-lg p-2 text-[#7f858b] transition hover:bg-[#f2efea] hover:text-[#4f555a]"
+                      className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
                     >
                       <PaperclipIcon />
                     </button>
@@ -581,14 +585,14 @@ export default function AIPage() {
                     <button
                       type="button"
                       title="Voice input"
-                      className="rounded-lg p-2 text-[#7f858b] transition hover:bg-[#f2efea] hover:text-[#4f555a]"
+                      className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
                     >
                       <MicIcon />
                     </button>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="hidden text-[10px] text-[#a1a5a9] sm:block">
+                    <span className="hidden text-[10px] text-muted-foreground sm:block">
                       Enter to send · Shift + Enter for new line
                     </span>
 
@@ -596,7 +600,7 @@ export default function AIPage() {
                       type="submit"
                       disabled={!input.trim() || isThinking}
                       aria-label="Send message"
-                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#861725] text-white transition hover:bg-[#74131f] disabled:cursor-not-allowed disabled:opacity-35"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-35"
                     >
                       <SendIcon />
                     </button>
@@ -605,7 +609,7 @@ export default function AIPage() {
               </div>
             </form>
 
-            <p className="mt-2 text-center text-[10px] leading-4 text-[#9a9ea2]">
+            <p className="mt-2 text-center text-[10px] leading-4 text-muted-foreground">
               AI can make mistakes. Verify important legal information against
               authoritative sources.
             </p>

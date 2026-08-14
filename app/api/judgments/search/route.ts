@@ -20,6 +20,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  /*
+   * Provider integration will be connected here.
+   *
+   * The provider itself is intentionally not exposed to the client.
+   */
+
   if (!env.indianKanoonApiKey) {
     console.error(
       "Judgment search service is unavailable: provider API key is not configured.",
@@ -39,14 +45,13 @@ export async function GET(request: NextRequest) {
   }
 
   /*
-    Next Batch
-
-    The judgment search provider integration will be
-    connected here.
-
-    const response =
-      await indianKanoon.search(...)
-  */
+   * Next step:
+   *
+   * const response = await indianKanoon.search(...)
+   *
+   * Then normalize the provider response into our own
+   * ResearchResult structure before returning it.
+   */
 
   return NextResponse.json({
     success: true,

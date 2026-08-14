@@ -1,14 +1,10 @@
 "use client";
 
-import {
-  Search,
-  X,
-} from "lucide-react";
+import { Search, X } from "lucide-react";
 
-import type { SearchMode } from "./research-search";
 import { SearchResultCard } from "./search-result-card";
 
-export interface ResearchResult {
+export type ResearchResult = {
   id: string;
   type: "judgment" | "act" | "section";
   title: string;
@@ -16,30 +12,33 @@ export interface ResearchResult {
   year: string;
   summary: string;
   tags: string[];
+
   section?: string;
   actName?: string;
   actNumber?: string;
-}
+
+  /**
+   * Optional identifiers / URLs returned by the backend.
+   * These allow the result card to open the correct
+   * research detail page when backend data supports them.
+   */
+  actId?: string;
+  sourceUrl?: string;
+};
 
 interface ResearchResultsProps {
   results: ResearchResult[];
   query: string;
-  searchMode: SearchMode;
+  searchMode: string;
   loading: boolean;
   searched: boolean;
   error: string;
   onClear: () => void;
 }
 
-function getModeLabel(mode: SearchMode) {
-  if (mode === null) {
-    return "All";
-  }
-
-  const labels: Record<
-    Exclude<SearchMode, null>,
-    string
-  > = {
+function getModeLabel(mode: string) {
+  const labels: Record<string, string> = {
+    all: "All",
     keyword: "Keyword",
     party: "Party Name",
     citation: "Citation",
@@ -47,7 +46,7 @@ function getModeLabel(mode: SearchMode) {
     section: "Section",
   };
 
-  return labels[mode];
+  return labels[mode] ?? mode;
 }
 
 export function ResearchResults({
@@ -59,6 +58,9 @@ export function ResearchResults({
   error,
   onClear,
 }: ResearchResultsProps) {
+  /*
+   * Nothing has been searched yet.
+   */
   if (!searched) {
     return (
       <section className="rounded-2xl border border-dashed border-border bg-card/40 px-6 py-14 text-center">
@@ -82,7 +84,7 @@ export function ResearchResults({
     <section>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">
+          <h2 className="font-serif text-2xl font-semibold tracking-tight text-foreground">
             Search Results
           </h2>
 
@@ -90,12 +92,8 @@ export function ResearchResults({
             {loading
               ? "Searching legal sources..."
               : `${results.length} ${
-                  results.length === 1
-                    ? "result"
-                    : "results"
-                } for "${query}" · ${getModeLabel(
-                  searchMode,
-                )}`}
+                  results.length === 1 ? "result" : "results"
+                } for "${query}" · ${getModeLabel(searchMode)}`}
           </p>
         </div>
 
@@ -113,22 +111,17 @@ export function ResearchResults({
 
       {loading && (
         <div className="space-y-4">
-          {Array.from({ length: 3 }).map(
-            (_, index) => (
-              <div
-                key={index}
-                className="animate-pulse rounded-2xl border border-border bg-card p-6"
-              >
-                <div className="h-5 w-2/3 rounded bg-secondary" />
-
-                <div className="mt-4 h-4 w-1/3 rounded bg-secondary" />
-
-                <div className="mt-5 h-4 w-full rounded bg-secondary" />
-
-                <div className="mt-2 h-4 w-5/6 rounded bg-secondary" />
-              </div>
-            ),
-          )}
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={index}
+              className="animate-pulse rounded-2xl border border-border bg-card p-6"
+            >
+              <div className="h-5 w-2/3 rounded bg-secondary" />
+              <div className="mt-4 h-4 w-1/3 rounded bg-secondary" />
+              <div className="mt-5 h-4 w-full rounded bg-secondary" />
+              <div className="mt-2 h-4 w-5/6 rounded bg-secondary" />
+            </div>
+          ))}
         </div>
       )}
 
@@ -150,22 +143,20 @@ export function ResearchResults({
         </div>
       )}
 
-      {!loading &&
-        !error &&
-        results.length === 0 && (
-          <div className="rounded-2xl border border-border bg-card px-6 py-14 text-center">
-            <Search className="mx-auto h-7 w-7 text-muted-foreground" />
+      {!loading && !error && results.length === 0 && (
+        <div className="rounded-2xl border border-border bg-card px-6 py-14 text-center">
+          <Search className="mx-auto h-7 w-7 text-muted-foreground" />
 
-            <h3 className="mt-4 text-lg font-semibold">
-              No results found
-            </h3>
+          <h3 className="mt-4 text-lg font-semibold">
+            No results found
+          </h3>
 
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-              Try a different search term or choose
-              another search type.
-            </p>
-          </div>
-        )}
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+            Try a different search term or choose another
+            search type.
+          </p>
+        </div>
+      )}
 
       {!loading && !error && results.length > 0 && (
         <div className="space-y-4">

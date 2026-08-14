@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Scale,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import type { ResearchResult } from "./research-results";
 
@@ -16,12 +17,12 @@ interface SearchResultCardProps {
 export function SearchResultCard({
   result,
 }: SearchResultCardProps) {
+  const router = useRouter();
+
   const Icon =
     result.type === "judgment"
       ? Scale
-      : result.type === "section"
-        ? BookOpen
-        : BookOpen;
+      : BookOpen;
 
   const typeLabel =
     result.type === "judgment"
@@ -30,8 +31,73 @@ export function SearchResultCard({
         ? "Section"
         : "Bare Act";
 
+  function openResult() {
+    /*
+     * If the backend eventually provides a direct URL,
+     * prefer it over constructing a local route.
+     */
+    if (result.sourceUrl) {
+      window.location.href = result.sourceUrl;
+      return;
+    }
+
+    /*
+     * Bare Act
+     */
+    if (result.type === "act") {
+      const id = result.actId || result.id;
+
+      router.push(
+        `/research/acts/${encodeURIComponent(id)}`,
+      );
+
+      return;
+    }
+
+    /*
+     * Section
+     */
+    if (result.type === "section") {
+      router.push(
+        `/research/sections/${encodeURIComponent(
+          result.id,
+        )}`,
+      );
+
+      return;
+    }
+
+    /*
+     * Judgment
+     */
+    router.push(
+      `/research/judgments/${encodeURIComponent(
+        result.id,
+      )}`,
+    );
+  }
+
+  function handleKeyDown(
+    event: React.KeyboardEvent<HTMLElement>,
+  ) {
+    if (
+      event.key === "Enter" ||
+      event.key === " "
+    ) {
+      event.preventDefault();
+      openResult();
+    }
+  }
+
   return (
-    <article className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40 sm:p-6">
+    <article
+      className="group cursor-pointer rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40 sm:p-6"
+      onClick={openResult}
+      onKeyDown={handleKeyDown}
+      role="link"
+      tabIndex={0}
+      aria-label={`Open ${result.type}: ${result.title}`}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -68,13 +134,12 @@ export function SearchResultCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          aria-label={`Open ${result.title}`}
-          className="hidden shrink-0 rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground sm:block"
+        <span
+          aria-hidden="true"
+          className="shrink-0 rounded-lg p-2 text-muted-foreground transition group-hover:bg-secondary group-hover:text-foreground"
         >
           <ArrowUpRight className="h-5 w-5" />
-        </button>
+        </span>
       </div>
 
       {result.actName && (

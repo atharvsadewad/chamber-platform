@@ -7,16 +7,17 @@ import {
   BookOpen,
   Tags,
   X,
+  Sparkles,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export type SearchMode =
+  | "all"
   | "keyword"
   | "party"
   | "citation"
   | "bare-act"
-  | "section"
-  | null;
+  | "section";
 
 interface ResearchSearchProps {
   query: string;
@@ -25,15 +26,21 @@ interface ResearchSearchProps {
     query: string,
     mode: SearchMode,
   ) => void;
+  onModeChange: (mode: SearchMode) => void;
   onClear: () => void;
   loading: boolean;
 }
 
 const SEARCH_TYPES: {
-  value: Exclude<SearchMode, null>;
+  value: SearchMode;
   label: string;
   icon: typeof Search;
 }[] = [
+  {
+    value: "all",
+    label: "All",
+    icon: Sparkles,
+  },
   {
     value: "keyword",
     label: "Keyword",
@@ -61,10 +68,8 @@ const SEARCH_TYPES: {
   },
 ];
 
-const PLACEHOLDERS: Record<
-  Exclude<SearchMode, null>,
-  string
-> = {
+const PLACEHOLDERS: Record<SearchMode, string> = {
+  all: "Search laws, judgments, sections...",
   keyword: "Search laws, judgments, sections...",
   party:
     "Search by party name, e.g. State of Maharashtra...",
@@ -79,6 +84,7 @@ export function ResearchSearch({
   query,
   searchMode,
   onSearch,
+  onModeChange,
   onClear,
   loading,
 }: ResearchSearchProps) {
@@ -89,11 +95,7 @@ export function ResearchSearch({
   }, [query]);
 
   function submitSearch() {
-    const trimmed = input.trim();
-
-    if (!trimmed) return;
-
-    onSearch(trimmed, searchMode);
+    onSearch(input, searchMode);
   }
 
   function handleKeyDown(
@@ -105,10 +107,9 @@ export function ResearchSearch({
     }
   }
 
-  const placeholder =
-    searchMode === null
-      ? "Search laws, judgments, sections and legal material..."
-      : PLACEHOLDERS[searchMode];
+  function handleModeChange(mode: SearchMode) {
+    onModeChange(mode);
+  }
 
   return (
     <section>
@@ -117,7 +118,7 @@ export function ResearchSearch({
           Legal Research
         </p>
 
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
           Search Indian legal material
         </h1>
 
@@ -128,7 +129,6 @@ export function ResearchSearch({
       </div>
 
       <div className="mt-7">
-        {/* Search input */}
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -140,7 +140,7 @@ export function ResearchSearch({
                 setInput(event.target.value)
               }
               onKeyDown={handleKeyDown}
-              placeholder={placeholder}
+              placeholder={PLACEHOLDERS[searchMode]}
               disabled={loading}
               className="h-12 w-full rounded-xl border border-input bg-background pl-12 pr-11 text-sm text-foreground outline-none transition focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
               aria-label="Legal research search"
@@ -164,22 +164,20 @@ export function ResearchSearch({
           <button
             type="button"
             onClick={submitSearch}
-            disabled={loading || !input.trim()}
+            disabled={
+              loading || !input.trim()
+            }
             className="h-12 rounded-xl bg-primary px-7 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Searching..." : "Search"}
+            {loading
+              ? "Searching..."
+              : "Search"}
           </button>
         </div>
 
-        {/* Search type */}
         <div className="mt-5">
           <div className="mb-2 text-xs font-medium text-muted-foreground">
             Search by
-            {searchMode === null && (
-              <span className="ml-2 font-normal">
-                · All legal material
-              </span>
-            )}
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -192,19 +190,18 @@ export function ResearchSearch({
                 <button
                   key={item.value}
                   type="button"
-                  onClick={() => {
-                    if (active) {
-                      // Clicking the active filter again
-                      // returns to general search.
-                      onSearch(input, null);
-                    } else {
-                      onSearch(input, item.value);
-                    }
-                  }}
+                  onClick={() =>
+                    handleModeChange(item.value)
+                  }
+                  disabled={loading}
                   className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors ${
                     active
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border bg-background text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  } ${
+                    loading
+                      ? "cursor-not-allowed opacity-60"
+                      : ""
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -215,18 +212,12 @@ export function ResearchSearch({
           </div>
         </div>
 
-        {/* Mode-specific helper text */}
-        {searchMode === "party" && (
+        {(searchMode === "party" ||
+          searchMode === "citation") && (
           <p className="mt-3 text-xs text-muted-foreground">
-            Search using the names of parties involved in a
-            case.
-          </p>
-        )}
-
-        {searchMode === "citation" && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Enter a recognised legal citation to find the
-            corresponding judgment.
+            This search mode is ready in the interface but
+            will use the judgment search service once its
+            corresponding backend support is connected.
           </p>
         )}
       </div>
