@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { SpeedInsights } from "@vercel/speed-insights/next";
+
 import "./globals.css";
 
 import { fontDisplay, fontBody, fontMono } from "@/lib/fonts";
@@ -112,6 +114,8 @@ export default function RootLayout({
         <ThemeProvider>
           <SiteShell>{children}</SiteShell>
         </ThemeProvider>
+
+        <SpeedInsights />
       </body>
     </html>
   );
