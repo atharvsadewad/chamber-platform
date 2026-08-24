@@ -43,17 +43,30 @@ export async function GET(request: Request) {
     );
   }
 
+  /*
+   * ---------------------------------------------------------
+   * ACT
+   * ---------------------------------------------------------
+   *
+   * The Act response also contains a lightweight list of its
+   * sections. Full section content is fetched only when the
+   * user opens a section.
+   *
+   * This keeps the same material API pipeline while avoiding
+   * unnecessary loading of every provision's full text.
+   */
   if (type === "act") {
-    const { data, error } = await chamberSupabase
-      .from("acts")
-      .select(
-        "id, act_name, short_name, year, act_number, description, subject, instrument_type, source, source_url",
-      )
-      .eq("id", numericId)
-      .maybeSingle();
+    const { data: act, error: actError } =
+      await chamberSupabase
+        .from("acts")
+        .select(
+          "id, act_name, short_name, year, act_number, description, subject, instrument_type, source, source_url",
+        )
+        .eq("id", numericId)
+        .maybeSingle();
 
-    if (error) {
-      console.error("Act lookup error:", error);
+    if (actError) {
+      console.error("Act lookup error:", actError);
 
       return NextResponse.json(
         {
@@ -65,7 +78,7 @@ export async function GET(request: Request) {
       );
     }
 
-    if (!data) {
+    if (!act) {
       return NextResponse.json(
         {
           success: false,
@@ -76,12 +89,50 @@ export async function GET(request: Request) {
       );
     }
 
+    const { data: sections, error: sectionsError } =
+      await chamberSupabase
+        .from("act_sections")
+        .select(
+          "id, act_id, section, title, description",
+        )
+        .eq("act_id", numericId)
+        .order("id", {
+          ascending: true,
+        });
+
+    if (sectionsError) {
+      console.error(
+        "Act sections lookup error:",
+        sectionsError,
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: "SECTIONS_LOOKUP_FAILED",
+          message: "Unable to load the sections of this Act.",
+        },
+        { status: 500 },
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      data,
+      data: {
+        act,
+        sections: sections ?? [],
+      },
     });
   }
 
+  /*
+   * ---------------------------------------------------------
+   * SECTION
+   * ---------------------------------------------------------
+   *
+   * Full provision content is fetched only when the user
+   * opens a specific section.
+   */
   const { data: section, error: sectionError } =
     await chamberSupabase
       .from("act_sections")

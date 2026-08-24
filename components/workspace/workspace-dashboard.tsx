@@ -116,13 +116,12 @@ export function WorkspaceDashboard({
         <section className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold">
-              Your collections
-            </h2>
-
+              Saved research
+              </h2>
+              
             <p className="mt-1 text-sm text-muted-foreground">
-              Organize research and saved legal material in one
-              place.
-            </p>
+              Keep important legal material available for quick access.
+              </p>
           </div>
 
           <CollectionsGrid />

@@ -90,7 +90,7 @@ export const metadata: Metadata = {
 
   manifest: "/manifest.json",
 
-  icons: {
+   icons: {
     icon: [
       { url: "/favicon.ico" },
       { url: "/favicon.svg", type: "image/svg+xml" },

@@ -18,7 +18,7 @@ const FOOTER_COLUMNS = [
       { href: "/procedures", label: "Procedures" },
       { href: "/dictionary", label: "Legal Dictionary" },
       {
-        href: "/laws-and-judgments-ai",
+        href: "/ai",
         label: "AI Assistant",
       },
       { href: "/research", label: "Legal Search" },
@@ -39,10 +39,10 @@ const FOOTER_COLUMNS = [
       { href: "/", label: "Home" },
       { href: "/research", label: "Research Workspace" },
       {
-        href: "/laws-and-judgments-ai",
+        href: "/ai",
         label: "AI Assistant",
       },
-      { href: "/contact", label: "Contact" },
+      { href: "/contact", label: "Contact Us" },
     ],
   },
 ] as const;

@@ -3,26 +3,72 @@
 import {
   ArrowUpRight,
   BookOpen,
+  Bookmark,
   CalendarDays,
+  Check,
   Scale,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import type { ResearchResult } from "./research-results";
+import {
+  isBookmarked,
+  toggleBookmark,
+} from "@/lib/workspace/bookmarks";
+import { useEffect, useState } from "react";
 
 interface SearchResultCardProps {
   result: ResearchResult;
+  onOpen: (result: ResearchResult) => void;
 }
 
 export function SearchResultCard({
   result,
+  onOpen,
 }: SearchResultCardProps) {
-  const router = useRouter();
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setSaved(isBookmarked(result.id));
+
+    function handleChange() {
+      setSaved(isBookmarked(result.id));
+    }
+
+    window.addEventListener(
+      "lawsandjudgments:bookmarks-changed",
+      handleChange,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "lawsandjudgments:bookmarks-changed",
+        handleChange,
+      );
+    };
+  }, [result.id]);
+
+  function handleBookmark() {
+    const next = toggleBookmark({
+      id: result.id,
+      type: result.type,
+      title: result.title,
+      source: result.source,
+      year: result.year,
+      summary: result.summary,
+      section: result.section,
+      actName: result.actName,
+      actNumber: result.actNumber,
+    });
+
+    setSaved(next);
+  }
 
   const Icon =
     result.type === "judgment"
       ? Scale
-      : BookOpen;
+      : result.type === "section"
+        ? BookOpen
+        : BookOpen;
 
   const typeLabel =
     result.type === "judgment"
@@ -31,75 +77,14 @@ export function SearchResultCard({
         ? "Section"
         : "Bare Act";
 
-  function openResult() {
-    /*
-     * If the backend eventually provides a direct URL,
-     * prefer it over constructing a local route.
-     */
-    if (result.sourceUrl) {
-      window.location.href = result.sourceUrl;
-      return;
-    }
-
-    /*
-     * Bare Act
-     */
-    if (result.type === "act") {
-      const id = result.actId || result.id;
-
-      router.push(
-        `/research/acts/${encodeURIComponent(id)}`,
-      );
-
-      return;
-    }
-
-    /*
-     * Section
-     */
-    if (result.type === "section") {
-      router.push(
-        `/research/sections/${encodeURIComponent(
-          result.id,
-        )}`,
-      );
-
-      return;
-    }
-
-    /*
-     * Judgment
-     */
-    router.push(
-      `/research/judgments/${encodeURIComponent(
-        result.id,
-      )}`,
-    );
-  }
-
-  function handleKeyDown(
-    event: React.KeyboardEvent<HTMLElement>,
-  ) {
-    if (
-      event.key === "Enter" ||
-      event.key === " "
-    ) {
-      event.preventDefault();
-      openResult();
-    }
-  }
-
   return (
-    <article
-      className="group cursor-pointer rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40 sm:p-6"
-      onClick={openResult}
-      onKeyDown={handleKeyDown}
-      role="link"
-      tabIndex={0}
-      aria-label={`Open ${result.type}: ${result.title}`}
-    >
+    <article className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/40 sm:p-6">
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+        <button
+          type="button"
+          onClick={() => onOpen(result)}
+          className="min-w-0 flex-1 text-left"
+        >
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
               <Icon className="h-3.5 w-3.5" />
@@ -132,14 +117,41 @@ export function SearchResultCard({
               </span>
             )}
           </div>
-        </div>
+        </button>
 
-        <span
-          aria-hidden="true"
-          className="shrink-0 rounded-lg p-2 text-muted-foreground transition group-hover:bg-secondary group-hover:text-foreground"
-        >
-          <ArrowUpRight className="h-5 w-5" />
-        </span>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={handleBookmark}
+            aria-label={
+              saved
+                ? `Remove ${result.title} from saved items`
+                : `Save ${result.title}`
+            }
+            title={saved ? "Saved" : "Save"}
+            className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+              saved
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            }`}
+          >
+            {saved ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <Bookmark className="h-4 w-4" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onOpen(result)}
+            aria-label={`Open ${result.title}`}
+            title="View"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <ArrowUpRight className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       {result.actName && (
@@ -172,6 +184,15 @@ export function SearchResultCard({
           ))}
         </div>
       )}
+
+      <button
+        type="button"
+        onClick={() => onOpen(result)}
+        className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+      >
+        View details
+        <ArrowUpRight className="h-4 w-4" />
+      </button>
     </article>
   );
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import { Search, X } from "lucide-react";
+import { useState } from "react";
 
 import { SearchResultCard } from "./search-result-card";
+import { ResearchResultDrawer } from "./research-result-drawer";
 
 export type ResearchResult = {
   id: string;
@@ -16,12 +18,6 @@ export type ResearchResult = {
   section?: string;
   actName?: string;
   actNumber?: string;
-
-  /**
-   * Optional identifiers / URLs returned by the backend.
-   * These allow the result card to open the correct
-   * research detail page when backend data supports them.
-   */
   actId?: string;
   sourceUrl?: string;
 };
@@ -36,18 +32,14 @@ interface ResearchResultsProps {
   onClear: () => void;
 }
 
-function getModeLabel(mode: string) {
-  const labels: Record<string, string> = {
-    all: "All",
-    keyword: "Keyword",
-    party: "Party Name",
-    citation: "Citation",
-    "bare-act": "Bare Act",
-    section: "Section",
-  };
-
-  return labels[mode] ?? mode;
-}
+const MODE_LABELS: Record<string, string> = {
+  all: "All",
+  keyword: "Keyword",
+  party: "Party Name",
+  citation: "Citation",
+  "bare-act": "Bare Act",
+  section: "Section",
+};
 
 export function ResearchResults({
   results,
@@ -58,9 +50,9 @@ export function ResearchResults({
   error,
   onClear,
 }: ResearchResultsProps) {
-  /*
-   * Nothing has been searched yet.
-   */
+  const [selectedResult, setSelectedResult] =
+    useState<ResearchResult | null>(null);
+
   if (!searched) {
     return (
       <section className="rounded-2xl border border-dashed border-border bg-card/40 px-6 py-14 text-center">
@@ -68,106 +60,107 @@ export function ResearchResults({
           <Search className="h-5 w-5 text-muted-foreground" />
         </div>
 
-        <h2 className="mt-4 text-lg font-semibold">
-          Start your research
+        <h2 className="mt-4 font-serif text-2xl font-semibold tracking-tight">
+          Start your legal research
         </h2>
 
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-          Search Indian legal material using a keyword,
-          party name, citation, Bare Act, or section.
+          Search Indian legal material using keywords, party names,
+          citations, Bare Acts or sections.
         </p>
       </section>
     );
   }
 
-  return (
-    <section>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="font-serif text-2xl font-semibold tracking-tight text-foreground">
-            Search Results
-          </h2>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            {loading
-              ? "Searching legal sources..."
-              : `${results.length} ${
-                  results.length === 1 ? "result" : "results"
-                } for "${query}" · ${getModeLabel(searchMode)}`}
-          </p>
+  if (loading) {
+    return (
+      <section>
+        <div className="mb-5">
+          <div className="h-7 w-44 animate-pulse rounded bg-secondary" />
+          <div className="mt-2 h-4 w-64 animate-pulse rounded bg-secondary" />
         </div>
 
-        {!loading && (
+        <div className="space-y-4">
+          {[1, 2, 3].map((item) => (
+            <div
+              key={item}
+              className="rounded-2xl border border-border bg-card p-6"
+            >
+              <div className="h-5 w-28 animate-pulse rounded bg-secondary" />
+              <div className="mt-4 h-6 w-2/3 animate-pulse rounded bg-secondary" />
+              <div className="mt-4 h-4 w-full animate-pulse rounded bg-secondary" />
+              <div className="mt-2 h-4 w-4/5 animate-pulse rounded bg-secondary" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <>
+      <section>
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="font-serif text-2xl font-semibold tracking-tight text-foreground">
+              Search Results
+            </h2>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              {results.length}{" "}
+              {results.length === 1 ? "result" : "results"} for{" "}
+              <span className="font-medium text-foreground">
+                “{query}”
+              </span>{" "}
+              · {MODE_LABELS[searchMode] ?? searchMode}
+            </p>
+          </div>
+
           <button
             type="button"
             onClick={onClear}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <X className="h-4 w-4" />
             Clear
           </button>
-        )}
-      </div>
-
-      {loading && (
-        <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div
-              key={index}
-              className="animate-pulse rounded-2xl border border-border bg-card p-6"
-            >
-              <div className="h-5 w-2/3 rounded bg-secondary" />
-              <div className="mt-4 h-4 w-1/3 rounded bg-secondary" />
-              <div className="mt-5 h-4 w-full rounded bg-secondary" />
-              <div className="mt-2 h-4 w-5/6 rounded bg-secondary" />
-            </div>
-          ))}
         </div>
-      )}
 
-      {!loading && error && (
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
-          <div className="flex items-start gap-3">
-            <Search className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-
-            <div>
-              <h3 className="font-semibold text-destructive">
-                Search unavailable
-              </h3>
-
-              <p className="mt-1 text-sm leading-6 text-destructive/80">
-                {error}
-              </p>
-            </div>
+        {error && (
+          <div className="mb-5 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+            {error}
           </div>
-        </div>
-      )}
+        )}
 
-      {!loading && !error && results.length === 0 && (
-        <div className="rounded-2xl border border-border bg-card px-6 py-14 text-center">
-          <Search className="mx-auto h-7 w-7 text-muted-foreground" />
+        {results.length === 0 && !error ? (
+          <div className="rounded-2xl border border-dashed border-border bg-card/40 px-6 py-14 text-center">
+            <Search className="mx-auto h-7 w-7 text-muted-foreground" />
 
-          <h3 className="mt-4 text-lg font-semibold">
-            No results found
-          </h3>
+            <h3 className="mt-4 font-serif text-xl font-semibold">
+              No results found
+            </h3>
 
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            Try a different search term or choose another
-            search type.
-          </p>
-        </div>
-      )}
+            <p className="mt-2 text-sm text-muted-foreground">
+              Try another search term or search mode.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {results.map((result) => (
+              <SearchResultCard
+                key={`${result.type}-${result.id}`}
+                result={result}
+                onOpen={setSelectedResult}
+              />
+            ))}
+          </div>
+        )}
+      </section>
 
-      {!loading && !error && results.length > 0 && (
-        <div className="space-y-4">
-          {results.map((result) => (
-            <SearchResultCard
-              key={`${result.type}-${result.id}`}
-              result={result}
-            />
-          ))}
-        </div>
-      )}
-    </section>
+      <ResearchResultDrawer
+        result={selectedResult}
+        onClose={() => setSelectedResult(null)}
+      />
+    </>
   );
 }
