@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ChevronDown,
   ChevronRight,
@@ -53,11 +54,15 @@ type SearchResult = {
 const BUCKET = "drafts";
 
 export default function DraftsPage() {
+  const searchParams = useSearchParams();
+  
   const [folders, setFolders] = React.useState<DraftFolder[]>(
     [],
   );
 
-  const [search, setSearch] = React.useState("");
+  const [search, setSearch] = React.useState(
+    () => searchParams.get("q")?.trim() ?? "",
+  );
 
   const [searchResults, setSearchResults] =
     React.useState<SearchResult[]>([]);
@@ -140,6 +145,11 @@ export default function DraftsPage() {
   React.useEffect(() => {
     void loadRootFolders();
   }, [loadRootFolders]);
+
+  React.useEffect(() => {
+    const query = searchParams.get("q")?.trim() ?? "";
+    setSearch(query);
+  }, [searchParams]);
 
   /*
    * ---------------------------------------------------------

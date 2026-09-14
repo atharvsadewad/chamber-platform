@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Bookmark,
   ChevronDown,
@@ -141,14 +142,23 @@ function flattenFiles(folder: ProcedureFolder): ProcedureFile[] {
 ------------------------------------------------------- */
 
 export default function ProceduresPage() {
+  const searchParams = useSearchParams();
+
   const [files, setFiles] = React.useState<ProcedureFile[]>([]);
-  const [search, setSearch] = React.useState("");
+  const [search, setSearch] = React.useState(
+    () => searchParams.get("q")?.trim() ?? "",
+  );
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
 
   const [bookmarked, setBookmarked] = React.useState<
     Set<string>
   >(new Set());
+
+  React.useEffect(() => {
+    const query = searchParams.get("q")?.trim() ?? "";
+    setSearch(query);
+  }, [searchParams]);
 
   React.useEffect(() => {
     loadProcedures();
@@ -159,36 +169,15 @@ export default function ProceduresPage() {
     setError("");
 
     try {
-      const { data, error: storageError } =
-        await supabase.storage
-          .from(BUCKET)
-          .list("", {
-            limit: 1000,
-            sortBy: {
-              column: "name",
-              order: "asc",
-            },
-          });
-
-      if (storageError) {
-        throw storageError;
-      }
-
-      if (!data) {
-        setFiles([]);
-        return;
-      }
-
       /*
-       * Supabase's list() returns folders at the current level.
-       *
-       * We recursively walk the bucket so that the frontend
-       * automatically discovers folders and files.
+       * Walk the bucket once. The previous implementation made a
+       * separate root list() request and then traversed the bucket
+       * sequentially. We now start the recursive walk immediately
+       * and traverse child folders concurrently.
        */
-
       const discovered: ProcedureFile[] = [];
 
-      async function walkFolder(folderPath: string) {
+      async function walkFolder(folderPath: string): Promise<void> {
         const { data: entries, error } =
           await supabase.storage
             .from(BUCKET)
@@ -204,7 +193,13 @@ export default function ProceduresPage() {
           throw error;
         }
 
-        for (const entry of entries ?? []) {
+        if (!entries?.length) {
+          return;
+        }
+
+        const childFolders: string[] = [];
+
+        for (const entry of entries) {
           const currentPath = folderPath
             ? `${folderPath}/${entry.name}`
             : entry.name;
@@ -232,9 +227,19 @@ export default function ProceduresPage() {
               url: publicData.publicUrl,
             });
           } else {
-            await walkFolder(currentPath);
+            childFolders.push(currentPath);
           }
         }
+
+        /*
+         * Search all folders at this level concurrently instead of
+         * waiting for each folder to finish before starting the next.
+         */
+        await Promise.all(
+          childFolders.map((childPath) =>
+            walkFolder(childPath),
+          ),
+        );
       }
 
       await walkFolder("");
@@ -294,11 +299,15 @@ export default function ProceduresPage() {
   const filteredFiles = React.useMemo(() => {
     if (!normalizedSearch) return [];
 
-    return flattenFiles(tree).filter((file) =>
-      file.name
-        .toLowerCase()
-        .includes(normalizedSearch)
-    );
+    return flattenFiles(tree).filter((file) => {
+      const name = file.name.toLowerCase();
+      const path = file.path.toLowerCase();
+
+      return (
+        name.includes(normalizedSearch) ||
+        path.includes(normalizedSearch)
+      );
+    });
   }, [tree, normalizedSearch]);
 
   return (

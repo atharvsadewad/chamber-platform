@@ -25,18 +25,12 @@ type StorageItem = {
   } | null;
 };
 
-export async function GET(
-  request: Request,
-) {
+export async function GET(request: Request) {
   try {
-    const { searchParams } =
-      new URL(request.url);
+    const { searchParams } = new URL(request.url);
 
     const query =
-      searchParams
-        .get("q")
-        ?.trim()
-        .toLowerCase() || "";
+      searchParams.get("q")?.trim().toLowerCase() || "";
 
     if (!query) {
       return NextResponse.json({
@@ -45,52 +39,36 @@ export async function GET(
       });
     }
 
-    const cookieStore =
-      await cookies();
+    const cookieStore = await cookies();
 
-    const supabase =
-      createServerClient(
-        process.env
-          .NEXT_PUBLIC_SUPABASE_URL!,
-        process.env
-          .NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-        {
-          cookies: {
-            getAll() {
-              return cookieStore.getAll();
-            },
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
 
-            setAll(
-              cookiesToSet,
-            ) {
-              try {
-                cookiesToSet.forEach(
-                  ({
-                    name,
-                    value,
-                    options,
-                  }) => {
-                    cookieStore.set(
-                      name,
-                      value,
-                      options,
-                    );
-                  },
-                );
-              } catch {
-                /*
-                 * The route is only reading
-                 * storage data, so cookie-setting
-                 * failures can safely be ignored.
-                 */
-              }
-            },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(
+                ({ name, value, options }) => {
+                  cookieStore.set(name, value, options);
+                },
+              );
+            } catch {
+              /*
+               * This route only reads Storage data.
+               * Cookie-setting failures can safely be ignored.
+               */
+            }
           },
         },
-      );
+      },
+    );
 
-    const results: SearchResult[] =
-      [];
+    const results: SearchResult[] = [];
 
     await searchFolder(
       supabase,
@@ -100,9 +78,7 @@ export async function GET(
     );
 
     results.sort((a, b) =>
-      a.name.localeCompare(
-        b.name,
-      ),
+      a.name.localeCompare(b.name),
     );
 
     return NextResponse.json({
@@ -131,13 +107,11 @@ export async function GET(
 }
 
 /* =========================================================
-   RECURSIVE STORAGE SEARCH
+   OPTIMIZED RECURSIVE STORAGE SEARCH
 ========================================================= */
 
 async function searchFolder(
-  supabase: ReturnType<
-    typeof createServerClient
-  >,
+  supabase: ReturnType<typeof createServerClient>,
   path: string,
   query: string,
   results: SearchResult[],
@@ -160,49 +134,41 @@ async function searchFolder(
     throw error;
   }
 
-  if (!data) {
+  if (!data?.length) {
     return;
   }
 
+  const folders: string[] = [];
+
+  /*
+   * Process files in the current folder immediately.
+   * Folder traversal is collected separately so all
+   * subfolders can be searched concurrently.
+   */
   for (const item of data as StorageItem[]) {
     const currentPath = path
       ? `${path}/${item.name}`
       : item.name;
 
-    /*
-     * Supabase Storage folders generally
-     * appear without file metadata/mimetype.
-     */
     const isFolder =
       !item.metadata ||
-      item.metadata.mimetype ===
-        undefined;
+      item.metadata.mimetype === undefined;
 
     if (isFolder) {
-      await searchFolder(
-        supabase,
-        currentPath,
-        query,
-        results,
-      );
-
+      folders.push(currentPath);
       continue;
     }
 
-    const name =
-      item.name.toLowerCase();
-
-    const fullPath =
-      currentPath.toLowerCase();
+    const name = item.name.toLowerCase();
+    const fullPath = currentPath.toLowerCase();
 
     /*
-     * Search both:
-     * - filename
-     * - complete storage path
+     * Match:
+     * 1. File name
+     * 2. Complete storage path
      *
-     * This means searches can match
-     * either the document itself or
-     * its folder/category.
+     * Since the path contains folder names,
+     * this also allows folder/category matching.
      */
     if (
       !name.includes(query) &&
@@ -223,18 +189,48 @@ async function searchFolder(
       id:
         item.id ??
         `file-${currentPath}`,
+
       name: item.name,
+
       path: currentPath,
+
       folderPath,
+
       size:
-        typeof item.metadata
-          ?.size === "number"
+        typeof item.metadata?.size === "number"
           ? item.metadata.size
           : undefined,
+
       updatedAt:
         item.updated_at ??
         item.created_at ??
         undefined,
     });
+  }
+
+  /*
+   * IMPORTANT OPTIMIZATION:
+   *
+   * The old version searched folders one after another:
+   *
+   *   folder A → wait → folder B → wait → folder C
+   *
+   * This version searches all folders concurrently:
+   *
+   *   folder A ─┐
+   *   folder B ─┼─→ concurrently
+   *   folder C ─┘
+   */
+  if (folders.length) {
+    await Promise.all(
+      folders.map((folderPath) =>
+        searchFolder(
+          supabase,
+          folderPath,
+          query,
+          results,
+        ),
+      ),
+    );
   }
 }

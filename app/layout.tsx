@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next"
 
 import "./globals.css";
 
@@ -53,6 +54,7 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+
     googleBot: {
       index: true,
       follow: true,
@@ -64,12 +66,18 @@ export const metadata: Metadata = {
 
   openGraph: {
     title: "Laws & Judgments | Indian Legal Research Platform",
+
     description:
       "Research Indian laws, Bare Acts, judgments, legal procedures, drafts and legal concepts from one unified platform.",
+
     url: "https://lawsandjudgments.in",
+
     siteName: "Laws & Judgments",
+
     locale: "en_IN",
+
     type: "website",
+
     images: [
       {
         url: "/logo.png",
@@ -82,19 +90,28 @@ export const metadata: Metadata = {
 
   twitter: {
     card: "summary_large_image",
+
     title: "Laws & Judgments | Indian Legal Research Platform",
+
     description:
       "Research Indian laws, judgments, legal procedures and legal concepts from one unified platform.",
+
     images: ["/logo.png"],
   },
 
   manifest: "/manifest.json",
 
-   icons: {
+  icons: {
     icon: [
-      { url: "/favicon.ico" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
+      {
+        url: "/favicon.ico",
+      },
+      {
+        url: "/favicon.svg",
+        type: "image/svg+xml",
+      },
     ],
+
     apple: "/apple-icon.png",
   },
 };
@@ -116,6 +133,7 @@ export default function RootLayout({
         </ThemeProvider>
 
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
