@@ -35,8 +35,8 @@ const POPULAR_SEARCHES = [
     href: "/drafts?q=Rent%20Agreement",
   },
   {
-    label: "FIR Procedure",
-    href: "/procedures?q=FIR%20Procedure",
+    label: "FIR",
+    href: "/procedures?q=FIR",
   },
   {
     label: "Affidavit",
