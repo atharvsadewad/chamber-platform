@@ -159,72 +159,6 @@ function MobileDateStrip({
   );
 }
 
-function MobileCategoryNav({
-  categories,
-  activeCategoryId,
-  onSelect,
-}: {
-  categories: ReturnType<typeof useNewspaper>["categories"];
-  activeCategoryId: string | null;
-  onSelect: (categoryId: string | null) => void;
-}) {
-  return (
-    <section className="px-3 pt-4 sm:hidden">
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
-        <button
-          type="button"
-          aria-pressed={activeCategoryId === null}
-          onClick={() => onSelect(null)}
-          className={[
-            "flex min-h-12 w-full items-center gap-3 border-b border-border px-4 text-left",
-            activeCategoryId === null
-              ? "bg-primary/10 text-primary"
-              : "text-foreground hover:bg-secondary",
-          ].join(" ")}
-        >
-          <FileText className="h-5 w-5 shrink-0" />
-          <span className="text-sm font-medium">Daily Newspapers</span>
-          <ChevronRight className="ml-auto h-5 w-5" />
-        </button>
-
-        {categories.map((category) => {
-          const Icon =
-            category.slug.includes("supreme")
-              ? Scale
-              : category.slug.includes("high-court")
-                ? Building2
-                : category.slug.includes("government")
-                  ? Bell
-                  : Star;
-
-          const active = activeCategoryId === category.id;
-
-          return (
-            <button
-              key={category.id}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onSelect(category.id)}
-              className={[
-                "flex min-h-12 w-full items-center gap-3 border-b border-border px-4 text-left last:border-b-0",
-                active
-                  ? "bg-primary/10 text-primary"
-                  : "text-foreground hover:bg-secondary",
-              ].join(" ")}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              <span className="text-sm font-medium">
-                {category.name}
-              </span>
-              <ChevronRight className="ml-auto h-5 w-5" />
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 function MobileWeekControls({
   editions,
   week,
@@ -455,7 +389,7 @@ export default function NewspaperPage() {
 
             <section className="mx-auto max-w-[1280px] px-3 py-4 sm:px-8 sm:py-6 lg:px-10">
               {loading ? (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-7">
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
                   {Array.from({ length: Math.min(7, Math.max(1, visible.length || 3)) }).map(
                     (_, index) => (
                       <div
@@ -493,7 +427,7 @@ export default function NewspaperPage() {
                 </div>
               ) : (
                 <>
-                  {/* Mobile: exactly three cards across, matching the supplied reference. */}
+                  {/* Mobile: compact three-card presentation. */}
                   <div className="grid grid-cols-3 gap-2 sm:hidden">
                     {visible.slice(0, 3).map((item) => (
                       <NewspaperEditionCard
@@ -514,7 +448,7 @@ export default function NewspaperPage() {
                     ))}
                   </div>
 
-                  {/* Desktop: original seven-column presentation. */}
+                  {/* Desktop: wider newspaper-card presentation. */}
                   <div className="hidden sm:block">
                     <div className="mb-4 flex items-end justify-between">
                       <div>
@@ -538,7 +472,7 @@ export default function NewspaperPage() {
                       </span>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7">
+                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {visible.map((item) => (
                         <NewspaperEditionCard
                           key={item.id}
@@ -564,12 +498,6 @@ export default function NewspaperPage() {
 
             {editions.length > 0 ? (
               <>
-                <MobileCategoryNav
-                  categories={categories}
-                  activeCategoryId={activeCategoryId}
-                  onSelect={selectCategory}
-                />
-
                 <MobileWeekControls
                   editions={editions}
                   week={week}
@@ -581,17 +509,6 @@ export default function NewspaperPage() {
                   }
                 />
 
-                <section className="px-3 py-5 sm:hidden">
-                  <div className="rounded-lg border border-border bg-card px-5 py-6 text-center">
-                    <p className="font-serif text-xl font-bold italic">
-                      “Stay informed. Stay ahead.”
-                    </p>
-                    <div className="mx-auto mt-4 h-px w-10 bg-primary" />
-                    <p className="mt-4 font-serif text-sm text-muted-foreground">
-                      Laws & Judgments
-                    </p>
-                  </div>
-                </section>
               </>
             ) : null}
           </div>

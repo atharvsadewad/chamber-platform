@@ -1,6 +1,15 @@
+"use client";
+
 import * as React from "react";
 import { BookOpen } from "lucide-react";
-import type { NewspaperArticle, NewspaperEdition } from "@/types/newspaper";
+
+import { supabase } from "@/providers/database/supabase";
+import type {
+  NewspaperArticle,
+  NewspaperEdition,
+} from "@/types/newspaper";
+
+const NEWSPAPER_MEDIA_BUCKET = "newspaper-media";
 
 export function NewspaperEditionCard({
   edition,
@@ -12,18 +21,39 @@ export function NewspaperEditionCard({
   onOpen: () => void;
 }) {
   const date = new Date(`${edition.edition_date}T00:00:00`);
-  const day = new Intl.DateTimeFormat("en-IN", { weekday: "long" }).format(date);
+  const day = new Intl.DateTimeFormat("en-IN", {
+    weekday: "long",
+  }).format(date);
+
   const formatted = new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "long",
     year: "numeric",
   }).format(date);
 
+  const coverImageUrl = React.useMemo(() => {
+    if (!edition.cover_image_path) {
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from(NEWSPAPER_MEDIA_BUCKET)
+      .getPublicUrl(edition.cover_image_path);
+
+    return data.publicUrl;
+  }, [edition.cover_image_path]);
+
   return (
     <article className="min-w-0 rounded-lg border border-border bg-card p-2 shadow-sm">
       <div className="px-2 pb-2 text-center">
-        <h3 className="font-serif text-xl font-bold text-primary">{day}</h3>
-        <p className="mt-1 text-xs text-muted-foreground">{formatted}</p>
+        <h3 className="font-serif text-xl font-bold text-primary">
+          {day}
+        </h3>
+
+        <p className="mt-1 text-xs text-muted-foreground">
+          {formatted}
+        </p>
+
         <div className="mx-auto mt-3 h-px w-10 bg-primary/60" />
       </div>
 
@@ -33,16 +63,20 @@ export function NewspaperEditionCard({
         className="group block w-full overflow-hidden rounded-md border border-border bg-background text-left"
       >
         <div className="aspect-[3/4] overflow-hidden bg-secondary">
-          {edition.cover_image_path ? (
+          {coverImageUrl ? (
             <img
-              src={edition.cover_image_path}
+              src={coverImageUrl}
               alt={`${edition.title} cover`}
               className="h-full w-full object-cover transition group-hover:scale-[1.02]"
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-4 text-center">
               <BookOpen className="h-9 w-9 text-primary/50" />
-              <p className="mt-3 font-serif text-xl font-bold">{edition.title}</p>
+
+              <p className="mt-3 font-serif text-xl font-bold">
+                {edition.title}
+              </p>
+
               {edition.subtitle ? (
                 <p className="mt-1 text-xs text-muted-foreground">
                   {edition.subtitle}
@@ -56,6 +90,7 @@ export function NewspaperEditionCard({
           <p className="line-clamp-3 font-serif text-sm font-bold leading-tight">
             {article?.headline ?? "Legal Newspaper"}
           </p>
+
           {article?.summary ? (
             <p className="mt-2 line-clamp-3 text-[11px] leading-4 text-muted-foreground">
               {article.summary}
