@@ -504,12 +504,12 @@ export default function DictionaryPage() {
         ================================================= */}
 
         <div className="max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-accent">
             Legal Dictionary
           </p>
 
           <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-            Legal Dictionary
+            Legal <span className="text-primary">Dictionary</span>
           </h1>
 
           <p className="mt-3 text-base leading-7 text-muted-foreground sm:mt-4 sm:text-lg">

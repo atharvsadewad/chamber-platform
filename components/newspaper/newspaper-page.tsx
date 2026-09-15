@@ -1,18 +1,8 @@
 "use client";
 
 import * as React from "react";
-import {
-  Bell,
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  Search,
-  Scale,
-  Star,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { Footer } from "@/components/layout/footer";
 import { useNewspaper } from "@/hooks/use-newspaper";
 import { NewspaperDateSidebar } from "./newspaper-date-sidebar";
 import { NewspaperEditionCard } from "./newspaper-edition-card";
@@ -20,14 +10,6 @@ import { NewspaperWeekStrip } from "./newspaper-week-strip";
 import { NewspaperReader } from "./newspaper-reader";
 
 const WEEK_SIZE = 7;
-
-const MOBILE_NAV = [
-  { label: "Daily Newspapers", icon: FileText, active: true },
-  { label: "Important Headlines", icon: Star, active: false },
-  { label: "Supreme Court Updates", icon: Scale, active: false },
-  { label: "High Court Updates", icon: Building2, active: false },
-  { label: "Government Notifications", icon: Bell, active: false },
-];
 
 function formatDate(value: string, options: Intl.DateTimeFormatOptions) {
   return new Intl.DateTimeFormat("en-IN", options).format(
@@ -66,10 +48,18 @@ function MobileDateStrip({
   selectedDate,
   editions,
   onSelect,
+  onPrevious,
+  onNext,
+  canPrevious,
+  canNext,
 }: {
   selectedDate: string;
   editions: ReturnType<typeof useNewspaper>["editions"];
   onSelect: (date: string) => void;
+  onPrevious: () => void;
+  onNext: () => void;
+  canPrevious: boolean;
+  canNext: boolean;
 }) {
   const selected = selectedDate
     ? new Date(`${selectedDate}T00:00:00`)
@@ -78,26 +68,18 @@ function MobileDateStrip({
   const days = calendarWeek(selectedDate, editions);
 
   return (
-    <section className="border-b border-border px-3 py-3 sm:hidden">
-      <div className="rounded-lg border border-border bg-card px-3 py-4 shadow-sm">
+    <section className="border-b border-border px-3 py-2 sm:hidden">
+      <div className="rounded-lg border border-border bg-card px-3 py-3 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-xl font-bold">Select Date</h2>
+          <h2 className="font-serif text-lg font-bold">Select Date</h2>
 
           <div className="flex items-center gap-1">
             <button
               type="button"
               aria-label="Previous week"
-              className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-secondary"
-              onClick={() => {
-                const previous = new Date(selected);
-                previous.setDate(previous.getDate() - 7);
-                const value = [
-                  previous.getFullYear(),
-                  String(previous.getMonth() + 1).padStart(2, "0"),
-                  String(previous.getDate()).padStart(2, "0"),
-                ].join("-");
-                onSelect(value);
-              }}
+              className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={onPrevious}
+              disabled={!canPrevious}
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -112,24 +94,16 @@ function MobileDateStrip({
             <button
               type="button"
               aria-label="Next week"
-              className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-secondary"
-              onClick={() => {
-                const next = new Date(selected);
-                next.setDate(next.getDate() + 7);
-                const value = [
-                  next.getFullYear(),
-                  String(next.getMonth() + 1).padStart(2, "0"),
-                  String(next.getDate()).padStart(2, "0"),
-                ].join("-");
-                onSelect(value);
-              }}
+              className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={onNext}
+              disabled={!canNext}
             >
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-7 text-center">
+        <div className="mt-2 grid grid-cols-7 text-center">
           {days.map((item) => {
             const active = item.value === selectedDate;
 
@@ -140,7 +114,7 @@ function MobileDateStrip({
                 disabled={!item.available}
                 onClick={() => onSelect(item.value)}
                 className={[
-                  "flex min-w-0 flex-col items-center justify-center rounded-md py-1.5",
+                  "flex min-w-0 flex-col items-center justify-center rounded-md py-1",
                   active
                     ? "bg-primary text-primary-foreground"
                     : item.available
@@ -164,11 +138,15 @@ function MobileWeekControls({
   week,
   onPrevious,
   onNext,
+  canPrevious,
+  canNext,
 }: {
   editions: ReturnType<typeof useNewspaper>["editions"];
   week: number;
   onPrevious: () => void;
   onNext: () => void;
+  canPrevious: boolean;
+  canNext: boolean;
 }) {
   const first = editions[week * WEEK_SIZE];
   const last =
@@ -190,13 +168,13 @@ function MobileWeekControls({
       : "";
 
   return (
-    <section className="px-3 pt-5 sm:hidden">
+    <section className="px-3 pt-3 sm:hidden">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <button
           type="button"
-          disabled={week === 0}
+          disabled={!canPrevious}
           onClick={onPrevious}
-          className="inline-flex min-h-12 items-center justify-center gap-1 rounded-lg border border-primary px-2 text-sm font-semibold text-primary disabled:opacity-40"
+          className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-primary px-2 text-sm font-semibold text-primary disabled:opacity-40"
         >
           <ChevronLeft className="h-5 w-5 shrink-0" />
           <span>Previous Week</span>
@@ -208,9 +186,9 @@ function MobileWeekControls({
 
         <button
           type="button"
-          disabled={(week + 1) * WEEK_SIZE >= editions.length}
+          disabled={!canNext}
           onClick={onNext}
-          className="inline-flex min-h-12 items-center justify-center gap-1 rounded-lg bg-primary px-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
+          className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg bg-primary px-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
         >
           <span>Next Week</span>
           <ChevronRight className="h-5 w-5 shrink-0" />
@@ -232,7 +210,6 @@ export default function NewspaperPage() {
     reload,
   } = useNewspaper();
 
-  const [search, setSearch] = React.useState("");
   const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
   const [reader, setReader] = React.useState(false);
   const [week, setWeek] = React.useState(0);
@@ -242,35 +219,7 @@ export default function NewspaperPage() {
     week * WEEK_SIZE + WEEK_SIZE,
   );
 
-  const articles = React.useMemo(() => {
-    if (!edition) return [];
-
-    const query = search.trim().toLowerCase();
-
-    return edition.articles.filter((article) => {
-      const matchesSearch =
-        !query ||
-        [
-          article.headline,
-          article.subheadline,
-          article.summary,
-          article.content,
-          article.source_name,
-          article.author,
-          article.category?.name,
-        ]
-          .filter(Boolean)
-          .some((value) =>
-            String(value).toLowerCase().includes(query),
-          );
-
-      if (!matchesSearch) return false;
-
-      if (!activeCategoryId) return true;
-
-      return article.category_id === activeCategoryId;
-    });
-  }, [edition, search, activeCategoryId]);
+  const articles = edition?.articles ?? [];
 
   function selectDate(value: string) {
     const foundIndex = editions.findIndex(
@@ -288,10 +237,27 @@ export default function NewspaperPage() {
 
   function selectCategory(categoryId: string | null) {
     setActiveCategoryId(categoryId);
-    setSearch("");
   }
 
   const totalWeeks = Math.max(1, Math.ceil(editions.length / WEEK_SIZE));
+
+  function selectWeek(nextWeek: number) {
+    const boundedWeek = Math.max(
+      0,
+      Math.min(totalWeeks - 1, nextWeek),
+    );
+
+    const firstEdition = editions[boundedWeek * WEEK_SIZE];
+
+    if (!firstEdition) return;
+
+    setWeek(boundedWeek);
+    void selectEdition(firstEdition.id);
+    setReader(false);
+  }
+
+  const canPreviousWeek = week < totalWeeks - 1;
+  const canNextWeek = week > 0;
 
   return (
     <>
@@ -301,7 +267,7 @@ export default function NewspaperPage() {
         <div className="h-[6px] bg-primary" />
 
         <div className="flex">
-          {/* Desktop sidebar — unchanged. */}
+          {/* Desktop archive navigation and category filters. */}
           <NewspaperDateSidebar
             selectedDate={edition?.edition_date ?? ""}
             availableDates={new Set(editions.map((item) => item.edition_date))}
@@ -314,18 +280,18 @@ export default function NewspaperPage() {
           <div className="min-w-0 flex-1">
             {/* Masthead — desktop styling preserved; mobile follows the supplied reference. */}
             <section className="border-b border-border">
-              <div className="mx-auto grid max-w-[1280px] items-center gap-4 px-4 py-6 sm:px-8 sm:py-7 lg:grid-cols-[minmax(0,1fr)_430px] lg:px-10 lg:py-8">
+              <div className="mx-auto grid max-w-[1280px] items-center gap-4 px-4 py-5 sm:px-8 sm:py-6 lg:grid-cols-[minmax(0,1fr)_430px] lg:px-10 lg:py-6">
                 <div>
-                  <h1 className="font-serif text-[46px] font-bold leading-[0.98] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+                  <h1 className="font-serif text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
                     Legal <span className="text-primary">Newspaper</span>
                   </h1>
 
-                  <p className="mt-4 max-w-[560px] text-[17px] leading-6 text-muted-foreground sm:text-lg">
+                  <p className="mt-3 max-w-[560px] text-base leading-6 text-muted-foreground sm:text-lg">
                     Daily legal news, updates and developments from across India.
                   </p>
                 </div>
 
-                <div className="flex min-h-[100px] items-center justify-end lg:min-h-[150px]">
+                <div className="flex min-h-[80px] items-center justify-end lg:min-h-[110px]">
                   <div className="border-l border-primary/70 pl-6 text-left sm:pl-7 lg:border-l-0 lg:pl-0 lg:text-right">
                     <p className="font-serif text-[20px] font-bold text-primary/80 sm:text-2xl lg:text-3xl">
                       Laws & Judgments
@@ -344,21 +310,13 @@ export default function NewspaperPage() {
               selectedDate={edition?.edition_date ?? ""}
               editions={editions}
               onSelect={selectDate}
+              onPrevious={() => selectWeek(week + 1)}
+              onNext={() => selectWeek(week - 1)}
+              canPrevious={canPreviousWeek}
+              canNext={canNextWeek}
             />
 
-            {/* Desktop search only — desktop layout remains unchanged. */}
-            <div className="mx-auto hidden max-w-[1280px] px-5 py-4 sm:block sm:px-8 lg:px-10">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search legal news, judgments, articles..."
-                  className="h-11 w-full rounded-lg border border-border bg-card pl-12 pr-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
-              </div>
-            </div>
-
+            {/* Desktop search intentionally omitted; newspaper covers are the primary archive entry point. */}
             {/* Desktop week strip only. The mobile reference has cards immediately after the date selector. */}
             {visible.length > 0 ? (
               <div className="hidden sm:block">
@@ -387,14 +345,14 @@ export default function NewspaperPage() {
               </div>
             ) : null}
 
-            <section className="mx-auto max-w-[1280px] px-3 py-4 sm:px-8 sm:py-6 lg:px-10">
+            <section className="mx-auto max-w-[1280px] px-3 py-3 sm:px-8 sm:py-4 lg:px-10">
               {loading ? (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
                   {Array.from({ length: Math.min(7, Math.max(1, visible.length || 3)) }).map(
                     (_, index) => (
                       <div
                         key={index}
-                        className="h-[350px] animate-pulse rounded-lg border border-border bg-secondary/40 sm:h-[430px]"
+                        className="h-[320px] animate-pulse rounded-lg border border-border bg-secondary/40 sm:h-[380px]"
                       />
                     ),
                   )}
@@ -427,9 +385,9 @@ export default function NewspaperPage() {
                 </div>
               ) : (
                 <>
-                  {/* Mobile: compact three-card presentation. */}
-                  <div className="grid grid-cols-3 gap-2 sm:hidden">
-                    {visible.slice(0, 3).map((item) => (
+                  {/* Mobile: two-column responsive archive grid. */}
+                  <div className="grid grid-cols-2 gap-3 sm:hidden">
+                    {visible.map((item) => (
                       <NewspaperEditionCard
                         key={item.id}
                         edition={item}
@@ -448,14 +406,14 @@ export default function NewspaperPage() {
                     ))}
                   </div>
 
-                  {/* Desktop: wider newspaper-card presentation. */}
+                  {/* Desktop: wider four-column archive grid. */}
                   <div className="hidden sm:block">
-                    <div className="mb-4 flex items-end justify-between">
+                    <div className="mb-3 flex items-end justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
                           Daily Newspapers
                         </p>
-                        <h2 className="mt-1 font-serif text-2xl font-bold">
+                        <h2 className="mt-1 font-serif text-xl font-bold">
                           {edition
                             ? new Intl.DateTimeFormat("en-IN", {
                                 month: "long",
@@ -472,7 +430,7 @@ export default function NewspaperPage() {
                       </span>
                     </div>
 
-                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {visible.map((item) => (
                         <NewspaperEditionCard
                           key={item.id}
@@ -501,12 +459,10 @@ export default function NewspaperPage() {
                 <MobileWeekControls
                   editions={editions}
                   week={week}
-                  onPrevious={() => setWeek((value) => Math.max(0, value - 1))}
-                  onNext={() =>
-                    setWeek((value) =>
-                      Math.min(totalWeeks - 1, value + 1),
-                    )
-                  }
+                  onPrevious={() => selectWeek(week + 1)}
+                  onNext={() => selectWeek(week - 1)}
+                  canPrevious={canPreviousWeek}
+                  canNext={canNextWeek}
                 />
 
               </>
@@ -515,7 +471,6 @@ export default function NewspaperPage() {
         </div>
       </main>
 
-      <Footer />
 
       {reader && edition ? (
         <NewspaperReader

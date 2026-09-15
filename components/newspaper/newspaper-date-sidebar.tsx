@@ -37,11 +37,7 @@ function calendarCells(year: number, month: number) {
   return cells;
 }
 
-function toDateValue(
-  year: number,
-  month: number,
-  day: number,
-) {
+function toDateValue(year: number, month: number, day: number) {
   return [
     year,
     String(month + 1).padStart(2, "0"),
@@ -85,29 +81,21 @@ export function NewspaperDateSidebar({
   onSelect: (date: string) => void;
   onCategorySelect: (categoryId: string | null) => void;
 }) {
-  const selected = selectedDate
-    ? new Date(`${selectedDate}T00:00:00`)
-    : new Date();
+  const selected = React.useMemo(() => {
+    const value = new Date(`${selectedDate}T00:00:00`);
 
-  const [visibleMonth, setVisibleMonth] =
-    React.useState(() =>
-      new Date(
-        selected.getFullYear(),
-        selected.getMonth(),
-        1,
-      ),
-    );
+    return Number.isNaN(value.getTime()) ? new Date() : value;
+  }, [selectedDate]);
 
-  /*
-   * Keep the calendar synchronized with the currently
-   * selected newspaper edition.
-   */
+  const [visibleMonth, setVisibleMonth] = React.useState(
+    () => new Date(selected.getFullYear(), selected.getMonth(), 1),
+  );
+
   React.useEffect(() => {
     if (!selectedDate) return;
 
-    const next = new Date(
-      `${selectedDate}T00:00:00`,
-    );
+    const next = new Date(`${selectedDate}T00:00:00`);
+    if (Number.isNaN(next.getTime())) return;
 
     setVisibleMonth((current) => {
       if (
@@ -117,11 +105,7 @@ export function NewspaperDateSidebar({
         return current;
       }
 
-      return new Date(
-        next.getFullYear(),
-        next.getMonth(),
-        1,
-      );
+      return new Date(next.getFullYear(), next.getMonth(), 1);
     });
   }, [selectedDate]);
 
@@ -129,13 +113,10 @@ export function NewspaperDateSidebar({
   const month = visibleMonth.getMonth();
   const cells = calendarCells(year, month);
 
-  const monthLabel = new Intl.DateTimeFormat(
-    "en-IN",
-    {
-      month: "long",
-      year: "numeric",
-    },
-  ).format(visibleMonth);
+  const monthLabel = new Intl.DateTimeFormat("en-IN", {
+    month: "long",
+    year: "numeric",
+  }).format(visibleMonth);
 
   function changeMonth(offset: number) {
     setVisibleMonth(
@@ -149,11 +130,12 @@ export function NewspaperDateSidebar({
   }
 
   return (
-    <aside className="hidden w-[296px] shrink-0 border-r border-border bg-background lg:block">
+    <aside
+      aria-label="Newspaper archive navigation"
+      className="hidden w-[296px] shrink-0 border-r border-border bg-background lg:block"
+    >
       <div className="px-5 py-6">
-        <h2 className="font-serif text-xl font-bold">
-          Select Date
-        </h2>
+        <h2 className="font-serif text-xl font-bold">Select Date</h2>
 
         <div className="mt-5 rounded-lg border border-border bg-card p-3 shadow-sm">
           <div className="flex items-center justify-between">
@@ -161,12 +143,15 @@ export function NewspaperDateSidebar({
               type="button"
               aria-label="Previous month"
               onClick={() => changeMonth(-1)}
-              className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-secondary"
+              className="flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft aria-hidden="true" className="h-4 w-4" />
             </button>
 
-            <span className="font-serif font-bold">
+            <span
+              aria-live="polite"
+              className="font-serif font-bold"
+            >
               {monthLabel}
             </span>
 
@@ -174,24 +159,21 @@ export function NewspaperDateSidebar({
               type="button"
               aria-label="Next month"
               onClick={() => changeMonth(1)}
-              className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-secondary"
+              className="flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight aria-hidden="true" className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="mt-3 grid grid-cols-7 text-center text-[10px] text-muted-foreground">
-            {[
-              "Sun",
-              "Mon",
-              "Tue",
-              "Wed",
-              "Thu",
-              "Fri",
-              "Sat",
-            ].map((day) => (
-              <span key={day}>{day}</span>
-            ))}
+          <div
+            aria-hidden="true"
+            className="mt-3 grid grid-cols-7 text-center text-[10px] text-muted-foreground"
+          >
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+              (day) => (
+                <span key={day}>{day}</span>
+              ),
+            )}
           </div>
 
           <div className="mt-2 grid grid-cols-7 gap-y-1 text-center text-xs">
@@ -200,22 +182,15 @@ export function NewspaperDateSidebar({
                 return (
                   <span
                     key={`blank-${index}`}
+                    aria-hidden="true"
                     className="h-8"
                   />
                 );
               }
 
-              const value = toDateValue(
-                year,
-                month,
-                day,
-              );
-
-              const active =
-                value === selectedDate;
-
-              const available =
-                availableDates.has(value);
+              const value = toDateValue(year, month, day);
+              const active = value === selectedDate;
+              const available = availableDates.has(value);
 
               return (
                 <button
@@ -224,13 +199,13 @@ export function NewspaperDateSidebar({
                   disabled={!available}
                   aria-label={
                     available
-                      ? `Select ${value}`
-                      : `${value} has no published edition`
+                      ? `Select newspaper for ${value}`
+                      : `No published newspaper for ${value}`
                   }
-                  aria-pressed={active}
+                  aria-current={active ? "date" : undefined}
                   onClick={() => onSelect(value)}
                   className={[
-                    "mx-auto flex h-8 w-8 items-center justify-center rounded-md transition-colors",
+                    "mx-auto flex h-8 w-8 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
                     active
                       ? "bg-primary font-bold text-primary-foreground"
                       : available
@@ -245,11 +220,12 @@ export function NewspaperDateSidebar({
           </div>
         </div>
 
-        <nav className="mt-4 space-y-1">
+        <nav
+          aria-label="Newspaper categories"
+          className="mt-4 space-y-1"
+        >
           {ITEMS.map(([label, Icon]) => {
-            const isDaily =
-              label === "Daily Newspapers";
-
+            const isDaily = label === "Daily Newspapers";
             const category = isDaily
               ? null
               : findCategory(label, categories);
@@ -266,13 +242,11 @@ export function NewspaperDateSidebar({
                 disabled={!isDaily && !category}
                 onClick={() =>
                   onCategorySelect(
-                    isDaily
-                      ? null
-                      : category?.id ?? null,
+                    isDaily ? null : category?.id ?? null,
                   )
                 }
                 className={[
-                  "flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm font-medium transition-colors",
+                  "flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                   active
                     ? "bg-primary/10 text-primary"
                     : category || isDaily
@@ -280,7 +254,7 @@ export function NewspaperDateSidebar({
                       : "cursor-not-allowed text-muted-foreground/40",
                 ].join(" ")}
               >
-                <Icon className="h-5 w-5 shrink-0" />
+                <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
                 {label}
               </button>
             );

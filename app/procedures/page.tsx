@@ -318,8 +318,8 @@ export default function ProceduresPage() {
           Procedures
         </p>
 
-        <h1 className="mt-2 text-4xl font-serif font-bold">
-          Legal Procedures
+        <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+          Legal <span className="text-primary">Procedures</span>
         </h1>
 
         <p className="mt-3 max-w-3xl text-muted-foreground">

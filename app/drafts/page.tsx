@@ -495,7 +495,7 @@ export default function DraftsPage() {
       <section className="border-b border-border">
         <div className="container-laws-and-judgments py-8 sm:py-10">
           <div className="max-w-3xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/5 px-3 py-1.5 text-xs font-medium text-accent">
               <FileText className="h-3.5 w-3.5" />
               Legal Draft Library
             </div>

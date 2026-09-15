@@ -9,7 +9,9 @@ function d(value: string) {
 }
 
 function weekday(value: string) {
-  return new Intl.DateTimeFormat("en-IN", { weekday: "long" }).format(d(value));
+  return new Intl.DateTimeFormat("en-IN", {
+    weekday: "long",
+  }).format(d(value));
 }
 
 function dateText(value: string) {
@@ -37,62 +39,87 @@ export function NewspaperWeekStrip({
   canPrevious: boolean;
   canNext: boolean;
 }) {
+  const firstEdition = editions[0];
+  const lastEdition = editions[editions.length - 1];
+
+  const rangeLabel =
+    firstEdition && lastEdition
+      ? `${dateText(lastEdition.edition_date)} – ${dateText(firstEdition.edition_date)}`
+      : "";
+
   return (
-    <section className="border-b border-border bg-background">
+    <section
+      aria-label="Newspaper edition navigation"
+      className="border-b border-border bg-background"
+    >
       <div className="mx-auto max-w-[1280px] px-4 py-3 sm:px-8 lg:px-10">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
-          {editions.map((item) => {
-            const active = item.id === selectedId;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onSelect(item.id)}
-                className={[
-                  "rounded-lg border px-3 py-2 text-center transition",
-                  active
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-card hover:border-primary/40",
-                ].join(" ")}
-              >
-                <span className="block font-serif text-sm font-bold sm:text-base">
-                  {weekday(item.edition_date)}
-                </span>
-                <span className="mt-1 block text-[10px] opacity-75">
-                  {dateText(item.edition_date)}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {editions.length > 0 ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+            {editions.map((item) => {
+              const active = item.id === selectedId;
 
-        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-          <button
-            type="button"
-            disabled={!canPrevious}
-            onClick={onPrevious}
-            className="inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 text-sm font-semibold text-primary disabled:opacity-35"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous Week
-          </button>
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onSelect(item.id)}
+                  className={[
+                    "rounded-lg border px-3 py-2 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card hover:border-primary/40",
+                  ].join(" ")}
+                >
+                  <span className="block font-serif text-sm font-bold sm:text-base">
+                    {weekday(item.edition_date)}
+                  </span>
 
-          <span className="hidden text-sm font-semibold text-primary md:block">
-            {editions.length
-              ? `${dateText(editions[0]?.edition_date ?? "")} – ${dateText(editions[editions.length - 1]?.edition_date ?? "")}`
-              : ""}
-          </span>
+                  <span className="mt-1 block text-[10px] opacity-75">
+                    {dateText(item.edition_date)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="py-2 text-center text-sm text-muted-foreground">
+            No newspaper editions available.
+          </p>
+        )}
 
-          <button
-            type="button"
-            disabled={!canNext}
-            onClick={onNext}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-35"
-          >
-            Next Week
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+        {editions.length > 0 && (
+          <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+            <button
+              type="button"
+              disabled={!canPrevious}
+              onClick={onPrevious}
+              aria-label="View previous newspaper week"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-primary px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+              Previous Week
+            </button>
+
+            <span
+              aria-live="polite"
+              className="hidden text-center text-sm font-semibold text-primary md:block"
+            >
+              {rangeLabel}
+            </span>
+
+            <button
+              type="button"
+              disabled={!canNext}
+              onClick={onNext}
+              aria-label="View next newspaper week"
+              className="inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              Next Week
+              <ChevronRight aria-hidden="true" className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

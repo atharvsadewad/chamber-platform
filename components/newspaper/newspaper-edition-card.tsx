@@ -44,17 +44,17 @@ export function NewspaperEditionCard({
   }, [edition.cover_image_path]);
 
   return (
-    <article className="min-w-0 rounded-lg border border-border bg-card p-2 shadow-sm">
-      <div className="px-2 pb-2 text-center">
-        <h3 className="font-serif text-xl font-bold text-primary">
+    <article className="min-w-0 rounded-lg border border-border bg-card p-1.5 shadow-sm">
+      <div className="px-1.5 pb-1.5 text-center">
+        <h3 className="font-serif text-lg font-bold text-primary">
           {day}
         </h3>
 
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
           {formatted}
         </p>
 
-        <div className="mx-auto mt-3 h-px w-10 bg-primary/60" />
+        <div className="mx-auto mt-2 h-px w-8 bg-primary/60" />
       </div>
 
       <button
@@ -78,31 +78,19 @@ export function NewspaperEditionCard({
               </p>
 
               {edition.subtitle ? (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {edition.subtitle}
                 </p>
               ) : null}
             </div>
           )}
         </div>
-
-        <div className="p-3">
-          <p className="line-clamp-3 font-serif text-sm font-bold leading-tight">
-            {article?.headline ?? "Legal Newspaper"}
-          </p>
-
-          {article?.summary ? (
-            <p className="mt-2 line-clamp-3 text-[11px] leading-4 text-muted-foreground">
-              {article.summary}
-            </p>
-          ) : null}
-        </div>
       </button>
 
       <button
         type="button"
         onClick={onOpen}
-        className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground"
+        className="mt-1.5 flex min-h-9 w-full items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground"
       >
         <BookOpen className="h-4 w-4" />
         Read Newspaper
