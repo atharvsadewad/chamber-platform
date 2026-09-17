@@ -98,17 +98,7 @@ export function Hero() {
         "
       >
         <div className="mx-auto w-full max-w-[1280px] text-center">
-          {/* Eyebrow */}
-          <Eyebrow
-            className="
-              mx-auto inline-flex items-center gap-2
-              rounded-full border border-primary/20
-              bg-primary/5 px-4 py-2
-            "
-          >
-            <Scale className="h-4 w-4 text-primary" />
-            India's Next-Gen Legal Research Platform
-          </Eyebrow>
+          
 
           {/* Heading */}
           <Display
