@@ -1,13 +1,23 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import {
+  FormEvent,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+
 import Link from "next/link";
+
 import {
   AlertCircle,
+  ArrowLeft,
   CheckCircle2,
   Loader2,
-  ArrowLeft,
 } from "lucide-react";
 
 import { AuthCard } from "@/components/auth/auth-card";
@@ -19,52 +29,59 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/providers/database/supabase";
 import { updatePassword } from "@/services/auth.service";
 
+function getSafeNextPath(
+  next: string | null,
+) {
+  if (
+    !next ||
+    !next.startsWith("/") ||
+    next.startsWith("//")
+  ) {
+    return "/workspace";
+  }
+
+  return next;
+}
+
 export default function UpdatePasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [password, setPassword] = useState("");
+  const [password, setPassword] =
+    useState("");
+
   const [confirmPassword, setConfirmPassword] =
     useState("");
 
   const [checkingSession, setCheckingSession] =
     useState(true);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
 
-  const nextParam = searchParams.get("next");
+  const [loading, setLoading] =
+    useState(false);
 
-  const next =
-    nextParam &&
-    nextParam.startsWith("/") &&
-    !nextParam.startsWith("//")
-      ? nextParam
-      : "/workspace";
+  const [success, setSuccess] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const next = getSafeNextPath(
+    searchParams.get("next"),
+  );
 
   useEffect(() => {
     let mounted = true;
 
-    async function initializeRecoverySession() {
+    async function checkRecoverySession() {
       try {
-        const code = searchParams.get("code");
-
         /*
-         * Supabase's PKCE password-recovery flow returns a
-         * one-time code. Exchange it for the authenticated
-         * recovery session before allowing a password change.
+         * The recovery token has already been verified
+         * by /auth/recover.
+         *
+         * At this stage we only need to confirm that
+         * Supabase has an authenticated session in the
+         * current browser.
          */
-        if (code) {
-          const { error: exchangeError } =
-            await supabase.auth.exchangeCodeForSession(
-              code,
-            );
-
-          if (exchangeError) {
-            throw exchangeError;
-          }
-        }
-
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -75,20 +92,17 @@ export default function UpdatePasswordPage() {
 
         if (!session) {
           setError(
-            "This password reset link is invalid or has expired. Please request a new reset link.",
+            "Your password reset session is unavailable or has expired. Please request a new reset link.",
           );
         }
-      } catch (err) {
+      } catch {
         if (!mounted) {
           return;
         }
 
-        const message =
-          err instanceof Error
-            ? err.message
-            : "Unable to verify this password reset link.";
-
-        setError(message);
+        setError(
+          "Unable to verify your password reset session. Please request a new reset link.",
+        );
       } finally {
         if (mounted) {
           setCheckingSession(false);
@@ -96,12 +110,12 @@ export default function UpdatePasswordPage() {
       }
     }
 
-    initializeRecoverySession();
+    checkRecoverySession();
 
     return () => {
       mounted = false;
     };
-  }, [searchParams]);
+  }, []);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -118,7 +132,9 @@ export default function UpdatePasswordPage() {
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(
+        "Passwords do not match.",
+      );
       return;
     }
 
@@ -152,7 +168,7 @@ export default function UpdatePasswordPage() {
           <div className="flex min-h-40 items-center justify-center">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Verifying reset link...
+              Verifying reset session...
             </div>
           </div>
         </AuthCard>
@@ -204,7 +220,7 @@ export default function UpdatePasswordPage() {
 
                 <div>
                   <p className="font-medium text-foreground">
-                    Reset link unavailable
+                    Reset session unavailable
                   </p>
 
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
@@ -260,9 +276,7 @@ export default function UpdatePasswordPage() {
                   placeholder="Re-enter your new password"
                   value={confirmPassword}
                   onChange={(event) =>
-                    setConfirmPassword(
-                      event.target.value,
-                    )
+                    setConfirmPassword(event.target.value)
                   }
                   disabled={loading}
                   minLength={8}
@@ -271,8 +285,8 @@ export default function UpdatePasswordPage() {
               </div>
 
               <p className="text-xs leading-5 text-muted-foreground">
-                Use at least 8 characters. Avoid using a
-                password you've used elsewhere.
+                Use at least 8 characters. Avoid using
+                a password you've used elsewhere.
               </p>
 
               <Button
@@ -291,8 +305,6 @@ export default function UpdatePasswordPage() {
               </Button>
             </form>
           )}
-
-          {!success && !error ? null : null}
         </div>
       </AuthCard>
     </AuthLayout>

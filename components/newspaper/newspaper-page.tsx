@@ -1,47 +1,32 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  PanelLeft,
+  PanelLeftClose,
+} from "lucide-react";
 
 import { useNewspaper } from "@/hooks/use-newspaper";
+
 import { NewspaperDateSidebar } from "./newspaper-date-sidebar";
 import { NewspaperEditionCard } from "./newspaper-edition-card";
-import { NewspaperWeekStrip } from "./newspaper-week-strip";
 import { NewspaperReader } from "./newspaper-reader";
+import { NewspaperWeekStrip } from "./newspaper-week-strip";
+
+import type { NewspaperEdition } from "@/types/newspaper";
 
 const WEEK_SIZE = 7;
 
-function formatDate(value: string, options: Intl.DateTimeFormatOptions) {
-  return new Intl.DateTimeFormat("en-IN", options).format(
+function formatDate(
+  value: string,
+  options: Intl.DateTimeFormatOptions,
+) {
+  return new Intl.DateTimeFormat(
+    "en-IN",
+    options,
+  ).format(
     new Date(`${value}T00:00:00`),
   );
-}
-
-function calendarWeek(selectedDate: string, editions: ReturnType<typeof useNewspaper>["editions"]) {
-  const selected = selectedDate
-    ? new Date(`${selectedDate}T00:00:00`)
-    : new Date();
-
-  const start = new Date(selected);
-  start.setDate(start.getDate() - start.getDay());
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-
-    const value = [
-      date.getFullYear(),
-      String(date.getMonth() + 1).padStart(2, "0"),
-      String(date.getDate()).padStart(2, "0"),
-    ].join("-");
-
-    return {
-      value,
-      day: date.getDate(),
-      weekday: new Intl.DateTimeFormat("en-IN", { weekday: "short" }).format(date),
-      available: editions.some((edition) => edition.edition_date === value),
-    };
-  });
 }
 
 function MobileDateStrip({
@@ -53,148 +38,164 @@ function MobileDateStrip({
   canPrevious,
   canNext,
 }: {
-  selectedDate: string;
-  editions: ReturnType<typeof useNewspaper>["editions"];
+  selectedDate: string | null;
+  editions: NewspaperEdition[];
   onSelect: (date: string) => void;
   onPrevious: () => void;
   onNext: () => void;
   canPrevious: boolean;
   canNext: boolean;
 }) {
-  const selected = selectedDate
-    ? new Date(`${selectedDate}T00:00:00`)
-    : new Date();
+  const selectedIndex = selectedDate
+    ? editions.findIndex(
+        (item) =>
+          item.edition_date === selectedDate,
+      )
+    : -1;
 
-  const days = calendarWeek(selectedDate, editions);
+  const currentWeek =
+    selectedIndex >= 0
+      ? Math.floor(
+          selectedIndex / WEEK_SIZE,
+        )
+      : 0;
+
+  const startIndex =
+    currentWeek * WEEK_SIZE;
+
+  const visible = editions.slice(
+    startIndex,
+    startIndex + WEEK_SIZE,
+  );
 
   return (
-    <section className="border-b border-border px-3 py-2 sm:hidden">
-      <div className="rounded-lg border border-border bg-card px-3 py-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="font-serif text-lg font-bold">Select Date</h2>
-
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              aria-label="Previous week"
-              className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
-              onClick={onPrevious}
-              disabled={!canPrevious}
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-
-            <span className="min-w-[120px] text-center font-serif text-base font-bold">
-              {new Intl.DateTimeFormat("en-IN", {
-                month: "long",
-                year: "numeric",
-              }).format(selected)}
-            </span>
-
-            <button
-              type="button"
-              aria-label="Next week"
-              className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
-              onClick={onNext}
-              disabled={!canNext}
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-2 grid grid-cols-7 text-center">
-          {days.map((item) => {
-            const active = item.value === selectedDate;
+    <section className="border-b border-border sm:hidden">
+      <div className="overflow-x-auto px-3 py-3">
+        <div className="flex min-w-max gap-2">
+          {visible.map((item) => {
+            const active =
+              item.edition_date ===
+              selectedDate;
 
             return (
               <button
-                key={item.value}
+                key={item.id}
                 type="button"
-                disabled={!item.available}
-                onClick={() => onSelect(item.value)}
+                aria-pressed={active}
+                onClick={() =>
+                  onSelect(
+                    item.edition_date,
+                  )
+                }
                 className={[
-                  "flex min-w-0 flex-col items-center justify-center rounded-md py-1",
+                  "min-w-[132px] rounded-lg border px-3 py-2 text-center transition",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                   active
-                    ? "bg-primary text-primary-foreground"
-                    : item.available
-                      ? "hover:bg-primary/10"
-                      : "text-muted-foreground/45",
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card hover:border-primary/40",
                 ].join(" ")}
               >
-                <span className="text-[11px]">{item.weekday}</span>
-                <span className="mt-1 text-base font-medium">{item.day}</span>
+                <span className="block font-serif text-sm font-bold">
+                  {formatDate(
+                    item.edition_date,
+                    {
+                      weekday: "long",
+                    },
+                  )}
+                </span>
+
+                <span className="mt-1 block text-[10px] opacity-75">
+                  {formatDate(
+                    item.edition_date,
+                    {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    },
+                  )}
+                </span>
               </button>
             );
           })}
+        </div>
+      </div>
+
+      <div className="px-3 pb-3">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <button
+            type="button"
+            disabled={!canPrevious}
+            onClick={onPrevious}
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-primary px-3 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Previous
+          </button>
+
+          <p className="w-[120px] text-center font-serif text-xs font-bold leading-5 text-primary">
+            {visible.length > 0
+              ? `${formatDate(
+                  visible[
+                    visible.length - 1
+                  ]!.edition_date,
+                  {
+                    day: "numeric",
+                    month: "short",
+                  },
+                )} – ${formatDate(
+                  visible[0]!.edition_date,
+                  {
+                    day: "numeric",
+                    month: "short",
+                  },
+                )}`
+              : ""}
+          </p>
+
+          <button
+            type="button"
+            disabled={!canNext}
+            onClick={onNext}
+            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Next
+          </button>
         </div>
       </div>
     </section>
   );
 }
 
-function MobileWeekControls({
-  editions,
-  week,
-  onPrevious,
-  onNext,
-  canPrevious,
-  canNext,
+function SidebarToggle({
+  open,
+  onClick,
 }: {
-  editions: ReturnType<typeof useNewspaper>["editions"];
-  week: number;
-  onPrevious: () => void;
-  onNext: () => void;
-  canPrevious: boolean;
-  canNext: boolean;
+  open: boolean;
+  onClick: () => void;
 }) {
-  const first = editions[week * WEEK_SIZE];
-  const last =
-    editions[
-      Math.min(editions.length - 1, week * WEEK_SIZE + WEEK_SIZE - 1)
-    ];
-
-  const range =
-    first && last
-      ? `${formatDate(first.edition_date, {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        })} – ${formatDate(last.edition_date, {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        })}`
-      : "";
-
   return (
-    <section className="px-3 pt-3 sm:hidden">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <button
-          type="button"
-          disabled={!canPrevious}
-          onClick={onPrevious}
-          className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-primary px-2 text-sm font-semibold text-primary disabled:opacity-40"
-        >
-          <ChevronLeft className="h-5 w-5 shrink-0" />
-          <span>Previous Week</span>
-        </button>
-
-        <p className="w-[120px] text-center font-serif text-sm font-bold leading-5 text-primary">
-          {range}
-        </p>
-
-        <button
-          type="button"
-          disabled={!canNext}
-          onClick={onNext}
-          className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg bg-primary px-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
-        >
-          <span>Next Week</span>
-          <ChevronRight className="h-5 w-5 shrink-0" />
-        </button>
-      </div>
-    </section>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={
+        open
+          ? "Hide newspaper sidebar"
+          : "Show newspaper sidebar"
+      }
+      aria-expanded={open}
+      className="hidden lg:inline-flex absolute left-4 top-5 z-10 h-9 w-9 items-center justify-center rounded-md border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+    >
+      {open ? (
+        <PanelLeftClose
+          className="h-4 w-4"
+          aria-hidden="true"
+        />
+      ) : (
+        <PanelLeft
+          className="h-4 w-4"
+          aria-hidden="true"
+        />
+      )}
+    </button>
   );
 }
 
@@ -210,84 +211,210 @@ export default function NewspaperPage() {
     reload,
   } = useNewspaper();
 
-  const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
-  const [reader, setReader] = React.useState(false);
-  const [week, setWeek] = React.useState(0);
-
-  const visible = editions.slice(
-    week * WEEK_SIZE,
-    week * WEEK_SIZE + WEEK_SIZE,
+  const [
+    activeCategoryId,
+    setActiveCategoryId,
+  ] = React.useState<string | null>(
+    null,
   );
 
-  const articles = edition?.articles ?? [];
+  const [
+    selectedDateFilter,
+    setSelectedDateFilter,
+  ] = React.useState<string | null>(
+    null,
+  );
 
-  function selectDate(value: string) {
-    const foundIndex = editions.findIndex(
-      (item) => item.edition_date === value,
+  const [reader, setReader] =
+    React.useState(false);
+
+  const [week, setWeek] =
+    React.useState(0);
+
+  const [sidebarOpen, setSidebarOpen] =
+    React.useState(true);
+
+  /*
+   * `selectedDateFilter` controls the archive grid.
+   *
+   * null  -> show the normal archive grid
+   * date  -> show only that date
+   *
+   * `edition` remains the actual edition loaded
+   * into the reader.
+   */
+  const visibleEditions =
+    selectedDateFilter
+      ? editions.filter(
+          (item) =>
+            item.edition_date ===
+            selectedDateFilter,
+        )
+      : editions.slice(
+          week * WEEK_SIZE,
+          week * WEEK_SIZE +
+            WEEK_SIZE,
+        );
+
+  const articles =
+    edition?.articles ?? [];
+
+  function selectDate(
+    value: string,
+  ) {
+    const foundIndex =
+      editions.findIndex(
+        (item) =>
+          item.edition_date === value,
+      );
+
+    if (foundIndex === -1) {
+      return;
+    }
+
+    const found =
+      editions[foundIndex];
+
+    if (!found) {
+      return;
+    }
+
+    /*
+     * Clicking an actual date activates
+     * the single-date filter.
+     */
+    setSelectedDateFilter(value);
+
+    setWeek(
+      Math.floor(
+        foundIndex / WEEK_SIZE,
+      ),
     );
 
-    if (foundIndex === -1) return;
+    setActiveCategoryId(null);
 
-    const found = editions[foundIndex];
-    if (!found) return;
-
-    setWeek(Math.floor(foundIndex / WEEK_SIZE));
     void selectEdition(found.id);
-  }
 
-  function selectCategory(categoryId: string | null) {
-    setActiveCategoryId(categoryId);
-  }
-
-  const totalWeeks = Math.max(1, Math.ceil(editions.length / WEEK_SIZE));
-
-  function selectWeek(nextWeek: number) {
-    const boundedWeek = Math.max(
-      0,
-      Math.min(totalWeeks - 1, nextWeek),
-    );
-
-    const firstEdition = editions[boundedWeek * WEEK_SIZE];
-
-    if (!firstEdition) return;
-
-    setWeek(boundedWeek);
-    void selectEdition(firstEdition.id);
     setReader(false);
   }
 
-  const canPreviousWeek = week < totalWeeks - 1;
-  const canNextWeek = week > 0;
+  function showAllEditions() {
+    setSelectedDateFilter(null);
+    setReader(false);
+  }
+
+  function selectCategory(
+    categoryId: string | null,
+  ) {
+    setActiveCategoryId(
+      categoryId,
+    );
+  }
+
+  const totalWeeks = Math.max(
+    1,
+    Math.ceil(
+      editions.length / WEEK_SIZE,
+    ),
+  );
+
+  function selectWeek(
+    nextWeek: number,
+  ) {
+    const boundedWeek =
+      Math.max(
+        0,
+        Math.min(
+          totalWeeks - 1,
+          nextWeek,
+        ),
+      );
+
+    const firstEdition =
+      editions[
+        boundedWeek * WEEK_SIZE
+      ];
+
+    if (!firstEdition) {
+      return;
+    }
+
+    /*
+     * Moving between weeks returns the user
+     * to the normal archive grid.
+     */
+    setWeek(boundedWeek);
+    setSelectedDateFilter(null);
+    setActiveCategoryId(null);
+    setReader(false);
+
+    void selectEdition(
+      firstEdition.id,
+    );
+  }
+
+  const canPreviousWeek =
+    week > 0;
+
+  const canNextWeek =
+    week < totalWeeks - 1;
 
   return (
     <>
-      {/* Navbar is universal and intentionally not rendered by this page. */}
-
       <main className="min-h-screen bg-background">
         <div className="h-[6px] bg-primary" />
 
-        <div className="flex">
-          {/* Desktop archive navigation and category filters. */}
+        <div className="relative flex">
           <NewspaperDateSidebar
-            selectedDate={edition?.edition_date ?? ""}
-            availableDates={new Set(editions.map((item) => item.edition_date))}
+            open={sidebarOpen}
+            selectedDate={
+              selectedDateFilter ??
+              edition?.edition_date ??
+              ""
+            }
+            availableDates={
+              new Set(
+                editions.map(
+                  (item) =>
+                    item.edition_date,
+                ),
+              )
+            }
             categories={categories}
-            activeCategoryId={activeCategoryId}
+            activeCategoryId={
+              activeCategoryId
+            }
             onSelect={selectDate}
-            onCategorySelect={selectCategory}
+            onCategorySelect={
+              selectCategory
+            }
           />
 
           <div className="min-w-0 flex-1">
-            {/* Masthead — desktop styling preserved; mobile follows the supplied reference. */}
             <section className="border-b border-border">
-              <div className="mx-auto grid max-w-[1280px] items-center gap-4 px-4 py-5 sm:px-8 sm:py-6 lg:grid-cols-[minmax(0,1fr)_430px] lg:px-10 lg:py-6">
-                <div>
+              <div className="relative mx-auto grid max-w-[1280px] items-center gap-4 px-4 py-5 sm:px-8 sm:py-6 lg:grid-cols-[minmax(0,1fr)_430px] lg:px-10 lg:py-6">
+                <SidebarToggle
+                  open={sidebarOpen}
+                  onClick={() =>
+                    setSidebarOpen(
+                      (value) =>
+                        !value,
+                    )
+                  }
+                />
+
+                <div className="lg:pl-10">
                   <h1 className="font-serif text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-                    Legal <span className="text-primary">Newspaper</span>
+                    Legal{" "}
+                    <span className="text-primary">
+                      Newspaper
+                    </span>
                   </h1>
 
                   <p className="mt-3 max-w-[560px] text-base leading-6 text-muted-foreground sm:text-lg">
-                    Daily legal news, updates and developments from across India.
+                    Daily legal news, updates
+                    and developments from
+                    across India.
                   </p>
                 </div>
 
@@ -296,63 +423,140 @@ export default function NewspaperPage() {
                     <p className="font-serif text-[20px] font-bold text-primary/80 sm:text-2xl lg:text-3xl">
                       Laws & Judgments
                     </p>
+
                     <p className="mt-2 max-w-[300px] font-serif text-sm italic leading-6 text-muted-foreground sm:text-base">
-                      “A well-informed citizen strengthens a stronger nation.”
+                      “A well-informed citizen
+                      strengthens a stronger
+                      nation.”
                     </p>
+
                     <div className="mt-4 h-px w-10 bg-primary lg:ml-auto" />
                   </div>
                 </div>
               </div>
             </section>
 
-            {/* Mobile reference date selector. */}
             <MobileDateStrip
-              selectedDate={edition?.edition_date ?? ""}
+              selectedDate={
+                selectedDateFilter
+              }
               editions={editions}
               onSelect={selectDate}
-              onPrevious={() => selectWeek(week + 1)}
-              onNext={() => selectWeek(week - 1)}
-              canPrevious={canPreviousWeek}
+              onPrevious={() =>
+                selectWeek(
+                  week - 1,
+                )
+              }
+              onNext={() =>
+                selectWeek(
+                  week + 1,
+                )
+              }
+              canPrevious={
+                canPreviousWeek
+              }
               canNext={canNextWeek}
             />
 
-            {/* Desktop search intentionally omitted; newspaper covers are the primary archive entry point. */}
-            {/* Desktop week strip only. The mobile reference has cards immediately after the date selector. */}
-            {visible.length > 0 ? (
+            {editions.length > 0 ? (
               <div className="hidden sm:block">
                 <NewspaperWeekStrip
-                  editions={visible}
-                  selectedId={selectedEditionId}
+                  editions={editions.slice(
+                    week * WEEK_SIZE,
+                    week * WEEK_SIZE +
+                      WEEK_SIZE,
+                  )}
+                  selectedId={
+                    selectedEditionId
+                  }
                   onSelect={(id) => {
-                    const selectedIndex = editions.findIndex(
-                      (item) => item.id === id,
+                    const selectedIndex =
+                      editions.findIndex(
+                        (item) =>
+                          item.id === id,
+                      );
+
+                    if (
+                      selectedIndex === -1
+                    ) {
+                      return;
+                    }
+
+                    const selected =
+                      editions[
+                        selectedIndex
+                      ];
+
+                    if (!selected) {
+                      return;
+                    }
+
+                    /*
+                     * Clicking a specific date
+                     * in the week strip also
+                     * activates the date filter.
+                     */
+                    setSelectedDateFilter(
+                      selected.edition_date,
                     );
 
-                    if (selectedIndex === -1) return;
+                    setWeek(
+                      Math.floor(
+                        selectedIndex /
+                          WEEK_SIZE,
+                      ),
+                    );
 
-                    setWeek(Math.floor(selectedIndex / WEEK_SIZE));
-                    void selectEdition(id);
+                    setActiveCategoryId(
+                      null,
+                    );
+
+                    void selectEdition(
+                      id,
+                    );
+
+                    setReader(false);
                   }}
-                  onPrevious={() => setWeek((value) => Math.max(0, value - 1))}
-                  onNext={() =>
-                    setWeek((value) =>
-                      Math.min(totalWeeks - 1, value + 1),
+                  onPrevious={() =>
+                    selectWeek(
+                      week - 1,
                     )
                   }
-                  canPrevious={week > 0}
-                  canNext={week < totalWeeks - 1}
+                  onNext={() =>
+                    selectWeek(
+                      week + 1,
+                    )
+                  }
+                  canPrevious={
+                    canPreviousWeek
+                  }
+                  canNext={
+                    canNextWeek
+                  }
                 />
               </div>
             ) : null}
 
-            <section className="mx-auto max-w-[1280px] px-3 py-3 sm:px-8 sm:py-4 lg:px-10">
+            <section className="mx-auto max-w-[1280px] px-3 py-4 sm:px-8 sm:py-5 lg:px-10">
               {loading ? (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-                  {Array.from({ length: Math.min(7, Math.max(1, visible.length || 3)) }).map(
+                <div
+                  className={[
+                    "grid gap-4",
+                    selectedDateFilter
+                      ? "grid-cols-1"
+                      : "grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+                  ].join(" ")}
+                >
+                  {Array.from({
+                    length:
+                      selectedDateFilter
+                        ? 1
+                        : 4,
+                  }).map(
                     (_, index) => (
                       <div
                         key={index}
-                        className="h-[320px] animate-pulse rounded-lg border border-border bg-secondary/40 sm:h-[380px]"
+                        className="h-[380px] animate-pulse rounded-lg border border-border bg-secondary/40"
                       />
                     ),
                   )}
@@ -362,12 +566,17 @@ export default function NewspaperPage() {
                   <h2 className="font-serif text-xl font-bold">
                     Unable to load the newspaper
                   </h2>
+
                   <p className="mt-2 text-sm text-muted-foreground">
-                    We’re having trouble loading the newspaper. Please try again.
+                    We’re having trouble loading
+                    the newspaper. Please try again.
                   </p>
+
                   <button
                     type="button"
-                    onClick={() => void reload()}
+                    onClick={() =>
+                      void reload()
+                    }
                     className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
                   >
                     Try Again
@@ -378,104 +587,130 @@ export default function NewspaperPage() {
                   <h2 className="font-serif text-2xl font-bold">
                     No published edition yet
                   </h2>
+
                   <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-                    Publish an edition in <code>newspaper_editions</code> to make it appear here.
-                    Add its stories through <code>newspaper_articles</code>.
+                    Publish an edition in{" "}
+                    <code>
+                      newspaper_editions
+                    </code>{" "}
+                    to make it appear here.
+                    Add its stories through{" "}
+                    <code>
+                      newspaper_articles
+                    </code>
+                    .
                   </p>
                 </div>
               ) : (
                 <>
-                  {/* Mobile: two-column responsive archive grid. */}
-                  <div className="grid grid-cols-2 gap-3 sm:hidden">
-                    {visible.map((item) => (
-                      <NewspaperEditionCard
-                        key={item.id}
-                        edition={item}
-                        article={
-                          item.id === edition?.id
-                            ? articles[0]
-                            : undefined
-                        }
-                        onOpen={async () => {
-                          if (item.id !== selectedEditionId) {
-                            await selectEdition(item.id);
-                          }
-                          setReader(true);
-                        }}
-                      />
-                    ))}
-                  </div>
+                  {selectedDateFilter ? (
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                          Selected Edition
+                        </p>
 
-                  {/* Desktop: wider four-column archive grid. */}
-                  <div className="hidden sm:block">
-                    <div className="mb-3 flex items-end justify-between">
+                        <h2 className="mt-1 font-serif text-xl font-bold">
+                          {formatDate(
+                            selectedDateFilter,
+                            {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            },
+                          )}
+                        </h2>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={
+                          showAllEditions
+                        }
+                        className="rounded-md border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
+                      >
+                        Show All Editions
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mb-4 flex items-end justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
                           Daily Newspapers
                         </p>
+
                         <h2 className="mt-1 font-serif text-xl font-bold">
-                          {edition
-                            ? new Intl.DateTimeFormat("en-IN", {
-                                month: "long",
-                                year: "numeric",
-                              }).format(
-                                new Date(`${edition.edition_date}T00:00:00`),
+                          {editions.length > 0
+                            ? formatDate(
+                                editions[
+                                  week *
+                                    WEEK_SIZE
+                                ]!.edition_date,
+                                {
+                                  month:
+                                    "long",
+                                  year: "numeric",
+                                },
                               )
                             : ""}
                         </h2>
                       </div>
 
                       <span className="text-sm text-muted-foreground">
-                        {articles.length} stories
+                        {visibleEditions.length}{" "}
+                        editions
                       </span>
                     </div>
+                  )}
 
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                      {visible.map((item) => (
+                  <div
+                    className={[
+                      "grid gap-4",
+                      selectedDateFilter
+                        ? "grid-cols-1"
+                        : "grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+                    ].join(" ")}
+                  >
+                    {visibleEditions.map(
+                      (item) => (
                         <NewspaperEditionCard
                           key={item.id}
                           edition={item}
                           article={
-                            item.id === edition?.id
+                            item.id ===
+                            edition?.id
                               ? articles[0]
                               : undefined
                           }
                           onOpen={async () => {
-                            if (item.id !== selectedEditionId) {
-                              await selectEdition(item.id);
+                            if (
+                              item.id !==
+                              selectedEditionId
+                            ) {
+                              await selectEdition(
+                                item.id,
+                              );
                             }
+
                             setReader(true);
                           }}
                         />
-                      ))}
-                    </div>
+                      ),
+                    )}
                   </div>
                 </>
               )}
             </section>
-
-            {editions.length > 0 ? (
-              <>
-                <MobileWeekControls
-                  editions={editions}
-                  week={week}
-                  onPrevious={() => selectWeek(week + 1)}
-                  onNext={() => selectWeek(week - 1)}
-                  canPrevious={canPreviousWeek}
-                  canNext={canNextWeek}
-                />
-
-              </>
-            ) : null}
           </div>
         </div>
       </main>
 
-
-      {reader && edition ? (
+      {edition && reader ? (
         <NewspaperReader
           edition={edition}
-          onClose={() => setReader(false)}
+          onClose={() =>
+            setReader(false)
+          }
         />
       ) : null}
     </>
