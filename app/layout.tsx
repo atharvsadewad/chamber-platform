@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://lawsandjudgments.in"),
 
   title: {
-    default: "Laws & Judgments | Indian Legal Research Platform",
+    default: "Laws & Judgments",
     template: "%s | Laws & Judgments",
   },
 

@@ -19,14 +19,16 @@ import {
   type BookmarkItem,
 } from "@/lib/workspace/bookmarks";
 
+import { supabase } from "@/providers/database/supabase";
+
+const NEWSPAPER_MEDIA_BUCKET = "newspaper-media";
+
 function splitParagraphs(
   value: string | null | undefined,
 ) {
   return (value ?? "")
     .split(/\n+/)
-    .map((paragraph) =>
-      paragraph.trim(),
-    )
+    .map((paragraph) => paragraph.trim())
     .filter(Boolean);
 }
 
@@ -57,9 +59,7 @@ export function NewspaperReader({
     const close = (
       event: KeyboardEvent,
     ) => {
-      if (
-        event.key === "Escape"
-      ) {
+      if (event.key === "Escape") {
         onClose();
       }
     };
@@ -76,36 +76,52 @@ export function NewspaperReader({
       );
   }, [onClose]);
 
+  const articleImageUrl =
+    React.useMemo(() => {
+      if (!article?.image_path) {
+        return null;
+      }
+
+      const { data } =
+        supabase.storage
+          .from(NEWSPAPER_MEDIA_BUCKET)
+          .getPublicUrl(
+            article.image_path,
+          );
+
+      return data.publicUrl;
+    }, [article?.image_path]);
+
   if (!article) {
     return null;
   }
 
   function bookmark() {
-  if (!article) {
-    return;
+    if (!article) {
+      return;
+    }
+
+    const item: BookmarkItem = {
+      id: edition.id,
+      type: "newspaper",
+      title: `Legal Newspaper — ${edition.edition_date}`,
+      source: "Laws & Judgments",
+      year: edition.edition_date.slice(
+        0,
+        4,
+      ),
+      summary:
+        article.summary ??
+        article.headline ??
+        "",
+      path: `/newspaper?edition=${edition.id}`,
+      url: `/newspaper?edition=${edition.id}`,
+    };
+
+    setBookmarked(
+      toggleBookmark(item),
+    );
   }
-
-  const item: BookmarkItem = {
-    id: edition.id,
-    type: "newspaper",
-    title: `Legal Newspaper — ${edition.edition_date}`,
-    source: "Laws & Judgments",
-    year: edition.edition_date.slice(
-      0,
-      4,
-    ),
-    summary:
-      article.summary ??
-      article.headline ??
-      "",
-    path: `/newspaper?edition=${edition.id}`,
-    url: `/newspaper?edition=${edition.id}`,
-  };
-
-  setBookmarked(
-    toggleBookmark(item),
-  );
-}
 
   /*
    * Summary is part of the article body.
@@ -197,12 +213,18 @@ export function NewspaperReader({
               </p>
             ) : null}
 
-            {article.image_path ? (
-              <img
-                src={article.image_path}
-                alt=""
-                className="mt-8 max-h-[520px] w-full rounded-lg object-cover"
-              />
+            {articleImageUrl ? (
+              <div className="mt-8 overflow-hidden rounded-lg border border-border bg-secondary/20">
+                <img
+                  src={articleImageUrl}
+                  alt={
+                    article.headline
+                      ? `Image for ${article.headline}`
+                      : "Article image"
+                  }
+                  className="max-h-[520px] w-full object-contain"
+                />
+              </div>
             ) : null}
 
             <div className="mt-9 space-y-6">

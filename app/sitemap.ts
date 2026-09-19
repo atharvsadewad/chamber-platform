@@ -1,56 +1,35 @@
 import type { MetadataRoute } from "next";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://lawsandjudgments.in";
+const BASE_URL = "https://lawsandjudgments.in";
 
+export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 1,
+      url: BASE_URL,
     },
     {
-      url: `${baseUrl}/research`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.9,
+      url: `${BASE_URL}/newspaper`,
     },
     {
-      url: `${baseUrl}/acts`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.9,
+      url: `${BASE_URL}/drafts`,
     },
     {
-      url: `${baseUrl}/judgments`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.9,
+      url: `${BASE_URL}/procedures`,
     },
     {
-      url: `${baseUrl}/drafts`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.7,
+      url: `${BASE_URL}/dictionary`,
     },
     {
-      url: `${baseUrl}/procedures`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.7,
+      url: `${BASE_URL}/research`,
     },
     {
-      url: `${baseUrl}/dictionary`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.7,
+      url: `${BASE_URL}/bare-acts`,
     },
     {
-      url: `${baseUrl}/ai`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
+      url: `${BASE_URL}/judgments`,
+    },
+    {
+      url: `${BASE_URL}/ai`,
     },
   ];
 }

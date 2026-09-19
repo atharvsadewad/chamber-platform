@@ -11,6 +11,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 
 interface AdminUser {
   id: string;
@@ -396,9 +397,12 @@ function UserRow({
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="truncate font-medium text-foreground">
+              <Link
+                href={`/admin/users/${user.id}`}
+                className="truncate font-medium text-foreground hover:text-primary"
+              >
                 {name}
-              </p>
+              </Link>
 
               {isCurrentUser && (
                 <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">

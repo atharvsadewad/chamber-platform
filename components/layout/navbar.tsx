@@ -16,6 +16,9 @@ import { NAVIGATION } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/providers/database/supabase";
 
+const TOP_REVEAL_ZONE = 16;
+const SCROLL_HIDE_THRESHOLD = 8;
+
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -23,6 +26,10 @@ export function Navbar() {
   const [open, setOpen] = React.useState(false);
   const [authenticated, setAuthenticated] = React.useState(false);
   const [authLoading, setAuthLoading] = React.useState(true);
+  const [visible, setVisible] = React.useState(true);
+
+  const lastScrollY = React.useRef(0);
+  const ticking = React.useRef(false);
 
   /*
    * Check the current Supabase session and keep the navbar
@@ -61,10 +68,111 @@ export function Navbar() {
     };
   }, []);
 
-  // Close mobile menu whenever the route changes.
+  /*
+   * Hide the navbar while scrolling down and reveal it
+   * immediately when the user scrolls upward.
+   */
+  React.useEffect(() => {
+    function updateNavbarVisibility() {
+      const currentScrollY = window.scrollY;
+
+      /*
+       * Always show the navbar at the top of the page.
+       */
+      if (currentScrollY <= 0) {
+        setVisible(true);
+        lastScrollY.current = 0;
+        ticking.current = false;
+        return;
+      }
+
+      const difference =
+        currentScrollY - lastScrollY.current;
+
+      /*
+       * Scrolling down.
+       */
+      if (
+        difference > SCROLL_HIDE_THRESHOLD &&
+        !open
+      ) {
+        setVisible(false);
+        lastScrollY.current = currentScrollY;
+      }
+
+      /*
+       * Scrolling up even slightly.
+       */
+      if (difference < 0) {
+        setVisible(true);
+        lastScrollY.current = currentScrollY;
+      }
+
+      ticking.current = false;
+    }
+
+    function handleScroll() {
+      if (ticking.current) return;
+
+      ticking.current = true;
+      window.requestAnimationFrame(updateNavbarVisibility);
+    }
+
+    /*
+     * Moving the pointer to the very top of the viewport
+     * reveals the navbar even when the user is not scrolling.
+     */
+    function handlePointerMove(
+      event: PointerEvent,
+    ) {
+      if (event.clientY <= TOP_REVEAL_ZONE) {
+        setVisible(true);
+      }
+    }
+
+    lastScrollY.current = window.scrollY;
+
+    window.addEventListener(
+      "scroll",
+      handleScroll,
+      { passive: true },
+    );
+
+    window.addEventListener(
+      "pointermove",
+      handlePointerMove,
+      { passive: true },
+    );
+
+    return () => {
+      window.removeEventListener(
+        "scroll",
+        handleScroll,
+      );
+
+      window.removeEventListener(
+        "pointermove",
+        handlePointerMove,
+      );
+    };
+  }, [open]);
+
+  /*
+   * Close mobile menu whenever the route changes.
+   */
   React.useEffect(() => {
     setOpen(false);
+    setVisible(true);
   }, [pathname]);
+
+  /*
+   * Keep the navbar visible whenever the mobile menu is open.
+   */
+  React.useEffect(() => {
+    if (open) {
+      setVisible(true);
+    }
+  }, [open]);
 
   async function handleSignOut() {
     try {
@@ -80,155 +188,54 @@ export function Navbar() {
   }
 
   return (
-    <header className="border-b border-border bg-background">
-      {/* Main Navbar */}
-      <div className="container-laws-and-judgments flex h-20 items-center justify-between">
-        {/* Logo */}
-        <Link
-          href="/"
-          onClick={() => setOpen(false)}
-          className="flex shrink-0 items-center pr-8 transition-opacity hover:opacity-90"
-        >
-          <div className="leading-none">
-            <h1 className="font-serif text-[1.65rem] font-black tracking-tight text-primary">
-              Laws &
-            </h1>
-
-            <p className="-mt-1 font-serif text-[1.55rem] font-black tracking-tight text-foreground">
-              Judgments
-            </p>
-          </div>
-        </Link>
-
-        {/* Desktop Navigation */}
-        <nav
-          className="hidden items-center gap-9 lg:flex xl:gap-10"
-          aria-label="Primary Navigation"
-        >
-          {NAVIGATION.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "text-sm font-medium transition-colors",
-                pathname === link.href
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
-
-          {/* AI Assistant */}
+    <div className="relative z-50 h-20">
+      <header
+        className={cn(
+          "fixed inset-x-0 top-0 z-50 w-full",
+          "border-b border-border/70",
+          "bg-background/80",
+          "backdrop-blur-xl backdrop-saturate-150",
+          "supports-[backdrop-filter]:bg-background/65",
+          "shadow-[0_1px_20px_rgba(0,0,0,0.04)]",
+          "transition-transform duration-300 ease-out",
+          visible
+            ? "translate-y-0"
+            : "-translate-y-full",
+        )}
+      >
+        {/* Main Navbar */}
+        <div className="container-laws-and-judgments flex h-20 items-center justify-between">
+          {/* Logo */}
           <Link
-            href="/ai"
-            className="ml-2 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+            href="/"
+            onClick={() => setOpen(false)}
+            className="flex shrink-0 items-center pr-8 transition-opacity hover:opacity-90"
           >
-            <Sparkles className="h-4 w-4" />
-            AI Assistant
+            <div className="leading-none">
+              <h1 className="font-serif text-[1.65rem] font-black tracking-tight text-primary">
+                Laws &
+              </h1>
+
+              <p className="-mt-1 font-serif text-[1.55rem] font-black tracking-tight text-foreground">
+                Judgments
+              </p>
+            </div>
           </Link>
-        </nav>
 
-        {/* Desktop Right */}
-        <div className="hidden items-center gap-3 lg:flex">
-          <ThemeToggle />
-
-          {!authLoading && !authenticated && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                asChild
-              >
-                <Link href="/auth/sign-in">
-                  Sign In
-                </Link>
-              </Button>
-
-              <Button
-                variant="accent"
-                size="sm"
-                asChild
-              >
-                <Link href="/auth/sign-up">
-                  Open Workspace
-                </Link>
-              </Button>
-            </>
-          )}
-
-          {!authLoading && authenticated && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                asChild
-              >
-                <Link href="/workspace">
-                  Workspace
-                </Link>
-              </Button>
-
-              <Button
-                variant="accent"
-                size="sm"
-                onClick={handleSignOut}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign out
-              </Button>
-            </>
-          )}
-        </div>
-
-        {/* Mobile Controls */}
-        <div className="flex items-center gap-2 lg:hidden">
-          <ThemeToggle />
-
-          <Button
-            variant="ghost"
-            size="icon"
-            type="button"
-            aria-label={
-              open ? "Close Menu" : "Open Menu"
-            }
-            aria-expanded={open}
-            aria-controls="mobile-nav"
-            onClick={() =>
-              setOpen((current) => !current)
-            }
-          >
-            {open ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </Button>
-        </div>
-      </div>
-
-      {/* Mobile Navigation */}
-      {open && (
-        <div
-          id="mobile-nav"
-          className="border-t border-border bg-background lg:hidden"
-        >
+          {/* Desktop Navigation */}
           <nav
-            className="container-laws-and-judgments flex flex-col gap-1 py-5"
-            aria-label="Mobile Navigation"
+            className="hidden items-center gap-9 lg:flex xl:gap-10"
+            aria-label="Primary Navigation"
           >
-            {/* Main Navigation */}
             {NAVIGATION.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setOpen(false)}
                 className={cn(
-                  "rounded-lg px-4 py-3 text-sm font-medium transition-colors",
+                  "text-sm font-medium transition-colors",
                   pathname === link.href
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {link.label}
@@ -238,76 +245,202 @@ export function Navbar() {
             {/* AI Assistant */}
             <Link
               href="/ai"
-              onClick={() => setOpen(false)}
-              className="mt-2 flex items-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              className="ml-2 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
             >
               <Sparkles className="h-4 w-4" />
               AI Assistant
             </Link>
-
-            {/* Mobile Auth Actions */}
-            <div className="mt-5 flex flex-col gap-3 border-t border-border pt-5">
-              {!authLoading && !authenticated && (
-                <>
-                  <Button
-                    variant="outline"
-                    asChild
-                  >
-                    <Link
-                      href="/auth/sign-in"
-                      onClick={() =>
-                        setOpen(false)
-                      }
-                    >
-                      Sign In
-                    </Link>
-                  </Button>
-
-                  <Button
-                    variant="accent"
-                    asChild
-                  >
-                    <Link
-                      href="/auth/sign-up"
-                      onClick={() =>
-                        setOpen(false)
-                      }
-                    >
-                      Open Workspace
-                    </Link>
-                  </Button>
-                </>
-              )}
-
-              {!authLoading && authenticated && (
-                <>
-                  <Button
-                    variant="outline"
-                    asChild
-                  >
-                    <Link
-                      href="/workspace"
-                      onClick={() =>
-                        setOpen(false)
-                      }
-                    >
-                      Workspace
-                    </Link>
-                  </Button>
-
-                  <Button
-                    variant="accent"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
-                  </Button>
-                </>
-              )}
-            </div>
           </nav>
+
+          {/* Desktop Right */}
+          <div className="hidden items-center gap-3 lg:flex">
+            <ThemeToggle />
+
+            {!authLoading && !authenticated && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                >
+                  <Link href="/auth/sign-in">
+                    Sign In
+                  </Link>
+                </Button>
+
+                <Button
+                  variant="accent"
+                  size="sm"
+                  asChild
+                >
+                  <Link href="/auth/sign-up">
+                    Open Workspace
+                  </Link>
+                </Button>
+              </>
+            )}
+
+            {!authLoading && authenticated && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                >
+                  <Link href="/workspace">
+                    Workspace
+                  </Link>
+                </Button>
+
+                <Button
+                  variant="accent"
+                  size="sm"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Mobile Controls */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <ThemeToggle />
+
+            <Button
+              variant="ghost"
+              size="icon"
+              type="button"
+              aria-label={
+                open
+                  ? "Close Menu"
+                  : "Open Menu"
+              }
+              aria-expanded={open}
+              aria-controls="mobile-nav"
+              onClick={() =>
+                setOpen((current) => !current)
+              }
+            >
+              {open ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
         </div>
-      )}
-    </header>
+
+        {/* Mobile Navigation */}
+        {open && (
+          <div
+            id="mobile-nav"
+            className="border-t border-border/70 bg-background/80 backdrop-blur-xl lg:hidden"
+          >
+            <nav
+              className="container-laws-and-judgments flex flex-col gap-1 py-5"
+              aria-label="Mobile Navigation"
+            >
+              {/* Main Navigation */}
+              {NAVIGATION.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() =>
+                    setOpen(false)
+                  }
+                  className={cn(
+                    "rounded-lg px-4 py-3 text-sm font-medium transition-colors",
+                    pathname === link.href
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+
+              {/* AI Assistant */}
+              <Link
+                href="/ai"
+                onClick={() =>
+                  setOpen(false)
+                }
+                className="mt-2 flex items-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <Sparkles className="h-4 w-4" />
+                AI Assistant
+              </Link>
+
+              {/* Mobile Auth Actions */}
+              <div className="mt-5 flex flex-col gap-3 border-t border-border pt-5">
+                {!authLoading &&
+                  !authenticated && (
+                    <>
+                      <Button
+                        variant="outline"
+                        asChild
+                      >
+                        <Link
+                          href="/auth/sign-in"
+                          onClick={() =>
+                            setOpen(false)
+                          }
+                        >
+                          Sign In
+                        </Link>
+                      </Button>
+
+                      <Button
+                        variant="accent"
+                        asChild
+                      >
+                        <Link
+                          href="/auth/sign-up"
+                          onClick={() =>
+                            setOpen(false)
+                          }
+                        >
+                          Open Workspace
+                        </Link>
+                      </Button>
+                    </>
+                  )}
+
+                {!authLoading &&
+                  authenticated && (
+                    <>
+                      <Button
+                        variant="outline"
+                        asChild
+                      >
+                        <Link
+                          href="/workspace"
+                          onClick={() =>
+                            setOpen(false)
+                          }
+                        >
+                          Workspace
+                        </Link>
+                      </Button>
+
+                      <Button
+                        variant="accent"
+                        onClick={
+                          handleSignOut
+                        }
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Sign out
+                      </Button>
+                    </>
+                  )}
+              </div>
+            </nav>
+          </div>
+        )}
+      </header>
+    </div>
   );
 }
