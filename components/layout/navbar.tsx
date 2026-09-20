@@ -337,7 +337,7 @@ export function Navbar() {
             {/* AI Assistant */}
             <Link
               href="/ai"
-              className="ml-2 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
             >
               <Sparkles className="h-4 w-4" />
               AI Assistant
