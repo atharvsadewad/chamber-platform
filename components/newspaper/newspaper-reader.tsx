@@ -21,7 +21,8 @@ import {
 
 import { supabase } from "@/providers/database/supabase";
 
-const NEWSPAPER_MEDIA_BUCKET = "newspaper-media";
+const NEWSPAPER_MEDIA_BUCKET =
+  "newspaper-media";
 
 function splitParagraphs(
   value: string | null | undefined,
@@ -45,14 +46,34 @@ export function NewspaperReader({
   const [bookmarked, setBookmarked] =
     React.useState(false);
 
+  const [bookmarking, setBookmarking] =
+    React.useState(false);
+
   const article =
     edition.articles[index];
 
   React.useEffect(() => {
+    let cancelled = false;
+
     setIndex(0);
-    setBookmarked(
-      isBookmarked(edition.id),
-    );
+
+    async function loadBookmarkState() {
+      const value =
+        await isBookmarked(
+          edition.id,
+          "newspaper",
+        );
+
+      if (!cancelled) {
+        setBookmarked(value);
+      }
+    }
+
+    void loadBookmarkState();
+
+    return () => {
+      cancelled = true;
+    };
   }, [edition.id]);
 
   React.useEffect(() => {
@@ -76,6 +97,32 @@ export function NewspaperReader({
       );
   }, [onClose]);
 
+  React.useEffect(() => {
+    function handleBookmarkChange() {
+      void (async () => {
+        const value =
+          await isBookmarked(
+            edition.id,
+            "newspaper",
+          );
+
+        setBookmarked(value);
+      })();
+    }
+
+    window.addEventListener(
+      "lawsandjudgments:bookmarks-changed",
+      handleBookmarkChange,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "lawsandjudgments:bookmarks-changed",
+        handleBookmarkChange,
+      );
+    };
+  }, [edition.id]);
+
   const articleImageUrl =
     React.useMemo(() => {
       if (!article?.image_path) {
@@ -96,11 +143,14 @@ export function NewspaperReader({
     return null;
   }
 
-  function bookmark() {
-    if (!article) {
-      return;
-    }
+  async function bookmark() {
+  if (bookmarking || !article) {
+    return;
+  }
 
+  setBookmarking(true);
+
+  try {
     const item: BookmarkItem = {
       id: edition.id,
       type: "newspaper",
@@ -118,10 +168,14 @@ export function NewspaperReader({
       url: `/newspaper?edition=${edition.id}`,
     };
 
-    setBookmarked(
-      toggleBookmark(item),
-    );
+    const next =
+      await toggleBookmark(item);
+
+    setBookmarked(next);
+  } finally {
+    setBookmarking(false);
   }
+}
 
   /*
    * Summary is part of the article body.
@@ -174,14 +228,17 @@ export function NewspaperReader({
 
             <button
               type="button"
-              onClick={bookmark}
+              onClick={() =>
+                void bookmark()
+              }
+              disabled={bookmarking}
               aria-label={
                 bookmarked
                   ? "Remove bookmark"
                   : "Bookmark edition"
               }
               aria-pressed={bookmarked}
-              className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-secondary"
+              className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-secondary disabled:cursor-wait disabled:opacity-60"
             >
               <Bookmark
                 className="h-4 w-4"

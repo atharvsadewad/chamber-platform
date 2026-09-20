@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 
 interface WorkspaceLayoutProps {
@@ -11,7 +13,7 @@ export function WorkspaceLayout({
 }: WorkspaceLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto flex max-w-[1600px]">
+      <div className="mx-auto flex min-h-screen max-w-[1600px]">
         <WorkspaceSidebar />
 
         <main className="min-w-0 flex-1">

@@ -35,35 +35,57 @@ export function CollectionsGrid() {
   const [items, setItems] =
     useState<BookmarkItem[]>([]);
 
+  const [loading, setLoading] =
+    useState(true);
+
   useEffect(() => {
-    function refresh() {
-      setItems(loadBookmarks());
+    let cancelled = false;
+
+    async function refresh() {
+      const bookmarks =
+        await loadBookmarks();
+
+      if (!cancelled) {
+        setItems(bookmarks);
+        setLoading(false);
+      }
     }
 
-    refresh();
+    void refresh();
+
+    function handleChange() {
+      void refresh();
+    }
 
     window.addEventListener(
       BOOKMARK_EVENT,
-      refresh,
-    );
-
-    window.addEventListener(
-      "storage",
-      refresh,
+      handleChange,
     );
 
     return () => {
-      window.removeEventListener(
-        BOOKMARK_EVENT,
-        refresh,
-      );
+      cancelled = true;
 
       window.removeEventListener(
-        "storage",
-        refresh,
+        BOOKMARK_EVENT,
+        handleChange,
       );
     };
   }, []);
+
+  if (loading) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map(
+          (_, index) => (
+            <div
+              key={index}
+              className="h-48 animate-pulse rounded-xl border border-border bg-card"
+            />
+          ),
+        )}
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -91,7 +113,7 @@ export function CollectionsGrid() {
 
         return (
           <article
-            key={item.id}
+            key={`${item.type}:${item.id}`}
             className="group rounded-xl border bg-card p-5 transition hover:border-primary/40 hover:shadow-sm"
           >
             <div className="flex items-start justify-between gap-3">
@@ -101,9 +123,16 @@ export function CollectionsGrid() {
 
               <button
                 type="button"
-                onClick={() => {
-                  removeBookmark(item.id);
-                  setItems(loadBookmarks());
+                onClick={async () => {
+                  await removeBookmark(
+                    item.id,
+                    item.type,
+                  );
+
+                  const bookmarks =
+                    await loadBookmarks();
+
+                  setItems(bookmarks);
                 }}
                 aria-label={`Remove ${item.title} from saved research`}
                 title="Remove from saved research"

@@ -1,0 +1,16 @@
+import type { Metadata } from "next";
+
+import ProfilePage from "@/components/profile/profile-page";
+
+export const metadata: Metadata = {
+  title: "Profile",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: { index: false, follow: false },
+  },
+};
+
+export default function ProfileRoute() {
+  return <ProfilePage />;
+}

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   BookOpen,
@@ -26,6 +27,19 @@ interface AdminEdition {
   article_count: number;
   cover_image_url: string | null;
 }
+
+export const metadata: Metadata = {
+  title: "A | Newspaper",
+  description: "Manage Laws & Judgments platform content, users and administration.",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
+};
 
 export default async function AdminNewspaperPage() {
   await requireAdmin();

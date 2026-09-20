@@ -20,14 +20,4 @@ export const NAVIGATION = [
     href: "/research",
     comingSoon: true,
   },
-  {
-    label: "Bare Acts",
-    href: "/bare-acts",
-    comingSoon: true,
-  },
-  {
-    label: "Judgments",
-    href: "/judgments",
-    comingSoon: true,
-  },
 ] as const;

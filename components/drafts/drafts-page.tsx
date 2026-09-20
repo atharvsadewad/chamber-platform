@@ -3,10 +3,18 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import {
+  trackAiMessage,
+  trackFeatureUse,
+  trackSearch,
+} from "@/services/analytics.service";
+import {
   ChevronDown,
   ChevronRight,
+  Check,
+  Copy,
   Download,
   Eye,
+  FileDown,
   FileText,
   Folder,
   FolderOpen,
@@ -15,10 +23,16 @@ import {
   Search,
   Sparkles,
   X,
+  Bookmark,
 } from "lucide-react";
 
 import { supabase } from "@/providers/database/supabase";
 import { cn } from "@/lib/utils";
+import {
+  isBookmarked,
+  toggleBookmark,
+  type BookmarkItem,
+} from "@/lib/workspace/bookmarks";
 
 type DraftFile = {
   type: "file";
@@ -200,11 +214,16 @@ export default function DraftsPage() {
             );
           }
 
-          setSearchResults(
-            Array.isArray(payload.data)
-              ? payload.data
-              : [],
-          );
+        const results = Array.isArray(payload.data)
+  ? payload.data
+  : [];
+
+setSearchResults(results);
+
+trackSearch({
+  search_mode: "drafts",
+  result_count: results.length,
+});
         } catch (err) {
           if (controller.signal.aborted) {
             return;
@@ -745,9 +764,13 @@ export default function DraftsPage() {
 
       <button
         type="button"
-        onClick={() =>
-          setAiOpen(true)
-        }
+        onClick={() => {
+          setAiOpen(true);
+          trackFeatureUse({
+            feature: "draft_ai_assistant",
+            action: "open",
+          });
+        }}
         className="fixed bottom-6 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-lg transition hover:scale-[1.02] hover:opacity-95 sm:bottom-7 sm:right-7"
       >
         <Sparkles className="h-4 w-4" />
@@ -768,70 +791,573 @@ export default function DraftsPage() {
       {/* AI modal */}
 
       {aiOpen && (
-        <div className="fixed inset-0 z-[60]">
-          <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
-            onMouseDown={() =>
-              setAiOpen(false)
-            }
-            aria-hidden="true"
-          />
-
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="absolute left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-background p-6 shadow-2xl"
-            onMouseDown={(event) =>
-              event.stopPropagation()
-            }
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </div>
-
-                <h2 className="mt-4 font-serif text-2xl font-semibold">
-                  Draft with AI
-                </h2>
-
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  AI-assisted drafting will be
-                  connected to the legal drafting
-                  workflow here.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setAiOpen(false)
-                }
-                className="rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                aria-label="Close AI Draft Assistant"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="mt-6 rounded-xl border border-dashed border-border bg-secondary/20 px-4 py-5 text-sm text-muted-foreground">
-              Select a draft workflow or provide
-              drafting instructions to begin.
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                setAiOpen(false)
-              }
-              className="mt-5 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <AIDraftModal
+          onClose={() => setAiOpen(false)}
+        />
       )}
     </main>
+  );
+}
+
+
+/* =========================================================
+   AI DRAFT ASSISTANT
+========================================================= */
+
+type DraftType =
+  | "fir"
+  | "legal-notice"
+  | "complaint"
+  | "affidavit"
+  | "application"
+  | "agreement";
+
+const DRAFT_TYPES: {
+  value: DraftType;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "fir",
+    label: "FIR",
+    description: "First Information Report",
+  },
+  {
+    value: "legal-notice",
+    label: "Legal Notice",
+    description: "Formal legal notice",
+  },
+  {
+    value: "complaint",
+    label: "Complaint",
+    description: "Formal complaint",
+  },
+  {
+    value: "affidavit",
+    label: "Affidavit",
+    description: "Sworn statement",
+  },
+  {
+    value: "application",
+    label: "Application",
+    description: "Formal legal application",
+  },
+  {
+    value: "agreement",
+    label: "Agreement",
+    description: "General legal agreement",
+  },
+];
+
+function AIDraftModal({
+  onClose,
+}: {
+  onClose: () => void;
+}) {
+  const [draftType, setDraftType] =
+    React.useState<DraftType>("fir");
+
+  const [instructions, setInstructions] =
+    React.useState("");
+
+  const [draft, setDraft] =
+    React.useState("");
+
+  const [generating, setGenerating] =
+    React.useState(false);
+
+  const [downloading, setDownloading] =
+    React.useState(false);
+
+  const [copied, setCopied] =
+    React.useState(false);
+
+  const [error, setError] =
+    React.useState("");
+
+  React.useEffect(() => {
+    function handleEscape(
+      event: KeyboardEvent,
+    ) {
+      if (event.key === "Escape" && !generating) {
+        onClose();
+      }
+    }
+
+    window.addEventListener(
+      "keydown",
+      handleEscape,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleEscape,
+      );
+    };
+  }, [generating, onClose]);
+
+  async function generateDraft() {
+    const details = instructions.trim();
+
+    if (!details) {
+      setError(
+        "Add the case facts, parties, dates, events or instructions you want included in the draft.",
+      );
+      return;
+    }
+
+    setGenerating(true);
+    setError("");
+    setDraft("");
+    setCopied(false);
+
+    const selectedType =
+      DRAFT_TYPES.find(
+        (item) => item.value === draftType,
+      );
+
+    const prompt = [
+      "You are the legal drafting assistant for Laws & Judgments, an Indian legal research platform.",
+      "",
+      `Generate a formal ${selectedType?.label ?? "legal"} draft.`,
+      selectedType?.description
+        ? `Document type: ${selectedType.description}.`
+        : "",
+      "",
+      "Drafting requirements:",
+      "- Use formal, professional Indian legal drafting language.",
+      "- Structure the document clearly with appropriate headings, parties, facts, grounds, relief/prayer and signature/place/date fields where appropriate.",
+      "- Use only facts supplied by the user.",
+      "- Never invent names, dates, addresses, events, sections, citations or other material facts.",
+      "- Where information is missing, use clear placeholders such as [NAME], [DATE], [ADDRESS] or [DETAILS].",
+      "- Do not add commentary before or after the draft.",
+      "- Return only the complete draft in plain text.",
+      "",
+      "User-provided facts and instructions:",
+      details,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      const response = await fetch(
+        "/api/ai",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            message: prompt,
+          }),
+        },
+      );
+
+      const data = await response
+        .json()
+        .catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            data?.message ||
+            data?.response ||
+            "Unable to generate the draft.",
+        );
+      }
+
+      const generated =
+        typeof data?.message ===
+        "string"
+          ? data.message.trim()
+          : typeof data?.response ===
+              "string"
+            ? data.response.trim()
+            : "";
+
+      if (!generated) {
+        throw new Error(
+          "The AI returned an empty draft. Please try again.",
+        );
+      }
+
+      setDraft(generated);
+
+      trackAiMessage({
+        feature: "draft_generator",
+        draft_type: draftType,
+      });
+    } catch (generationError) {
+      console.error(
+        "AI draft generation error:",
+        generationError,
+      );
+
+      setError(
+        generationError instanceof
+          Error
+          ? generationError.message
+          : "Unable to generate the draft. Please try again.",
+      );
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function copyDraft() {
+    if (!draft) return;
+
+    try {
+      await navigator.clipboard.writeText(
+        draft,
+      );
+
+      setCopied(true);
+
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 1600);
+    } catch (copyError) {
+      console.error(
+        "Draft copy error:",
+        copyError,
+      );
+    }
+  }
+
+  async function downloadDocx() {
+    if (!draft || downloading) return;
+
+    setDownloading(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        "/api/drafts/docx",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            title:
+              DRAFT_TYPES.find(
+                (item) =>
+                  item.value ===
+                  draftType,
+              )?.label ??
+              "Legal Draft",
+            content: draft,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const data =
+          await response
+            .json()
+            .catch(() => null);
+
+        throw new Error(
+          data?.error ||
+            "Unable to create the DOCX file.",
+        );
+      }
+
+      const blob =
+        await response.blob();
+
+      const url =
+        URL.createObjectURL(blob);
+
+      const link =
+        document.createElement("a");
+
+      link.href = url;
+      link.download = `${slugifyDraftTitle(
+        draftType,
+      )}.docx`;
+
+      document.body.appendChild(
+        link,
+      );
+
+      link.click();
+      link.remove();
+
+      URL.revokeObjectURL(url);
+
+      trackFeatureUse({
+        feature: "draft_ai_assistant",
+        action: "download_docx",
+      });
+    } catch (downloadError) {
+      console.error(
+        "AI draft DOCX error:",
+        downloadError,
+      );
+
+      setError(
+        downloadError instanceof
+          Error
+          ? downloadError.message
+          : "Unable to download the DOCX file.",
+      );
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60]">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onMouseDown={() => {
+          if (!generating && !downloading) {
+            onClose();
+          }
+        }}
+        aria-hidden="true"
+      />
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ai-draft-title"
+        className="absolute left-1/2 top-1/2 flex max-h-[90vh] w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
+        onMouseDown={(event) =>
+          event.stopPropagation()
+        }
+      >
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <Sparkles className="h-5 w-5 text-primary" />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+                AI Draft Assistant
+              </p>
+
+              <h2
+                id="ai-draft-title"
+                className="mt-1 font-serif text-2xl font-semibold tracking-tight text-foreground"
+              >
+                Generate a legal draft
+              </h2>
+
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Provide the facts and instructions. The
+                assistant will turn them into a structured
+                legal draft.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={generating || downloading}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+            aria-label="Close AI Draft Assistant"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+          <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Document type
+              </p>
+
+              <div className="mt-2 grid gap-2">
+                {DRAFT_TYPES.map((item) => {
+                  const active =
+                    draftType === item.value;
+
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() =>
+                        setDraftType(
+                          item.value,
+                        )
+                      }
+                      disabled={generating}
+                      className={`rounded-xl border px-3 py-3 text-left transition-colors ${
+                        active
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-background text-foreground hover:bg-secondary"
+                      } disabled:pointer-events-none disabled:opacity-60`}
+                    >
+                      <span className="block text-sm font-medium">
+                        {item.label}
+                      </span>
+
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {item.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="min-w-0">
+              <label
+                htmlFor="ai-draft-details"
+                className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+              >
+                Case details & instructions
+              </label>
+
+              <textarea
+                id="ai-draft-details"
+                value={instructions}
+                onChange={(event) =>
+                  setInstructions(
+                    event.target.value,
+                  )
+                }
+                placeholder="Describe the parties, facts, dates, events, relief sought and any specific instructions. For example: The complainant is [NAME]... The incident occurred on [DATE]..."
+                disabled={generating}
+                className="mt-2 min-h-48 w-full resize-y rounded-xl border border-input bg-background px-4 py-3 text-sm leading-6 text-foreground outline-none transition focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+              />
+
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Missing information will be left as
+                  placeholders rather than invented.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    void generateDraft()
+                  }
+                  disabled={
+                    generating ||
+                    !instructions.trim()
+                  }
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  {generating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Generate Draft
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {error && (
+                <div
+                  role="alert"
+                  className="mt-4 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm leading-6 text-destructive"
+                >
+                  {error}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {draft && (
+            <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-background">
+              <div className="flex flex-col gap-3 border-b border-border bg-secondary/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+                    Generated draft
+                  </p>
+
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Review and edit the text before using
+                    it for any legal purpose.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void copyDraft()
+                    }
+                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+
+                    {copied
+                      ? "Copied"
+                      : "Copy"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void downloadDocx()
+                    }
+                    disabled={downloading}
+                    className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    {downloading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FileDown className="h-4 w-4" />
+                    )}
+
+                    {downloading
+                      ? "Preparing..."
+                      : "Download DOCX"}
+                  </button>
+                </div>
+              </div>
+
+              <pre className="max-h-[38vh] overflow-auto whitespace-pre-wrap px-5 py-5 font-serif text-[15px] leading-7 text-foreground sm:px-6">
+                {draft}
+              </pre>
+            </section>
+          )}
+
+          <div className="mt-5 rounded-xl border border-primary/10 bg-primary/5 px-4 py-3 text-xs leading-5 text-muted-foreground">
+            AI-generated drafts are assistance tools, not a substitute for
+            legal review. Verify facts, applicable law and procedural
+            requirements against authoritative sources before use.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function slugifyDraftTitle(
+  draftType: DraftType,
+) {
+  const label =
+    DRAFT_TYPES.find(
+      (item) => item.value === draftType,
+    )?.label ?? "legal-draft";
+
+  return (
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") ||
+    "legal-draft"
   );
 }
 
@@ -982,6 +1508,67 @@ function DraftFile({
     setDownloading,
   ] = React.useState(false);
 
+  const [bookmarked, setBookmarked] =
+    React.useState(false);
+  const [bookmarking, setBookmarking] =
+    React.useState(false);
+
+  const refreshBookmark = React.useCallback(
+    async () => {
+      const value = await isBookmarked(
+        node.id,
+        "draft",
+      );
+      setBookmarked(value);
+    },
+    [node.id],
+  );
+
+  React.useEffect(() => {
+    void refreshBookmark();
+
+    const handleBookmarkChange = () => {
+      void refreshBookmark();
+    };
+
+    window.addEventListener(
+      "lawsandjudgments:bookmarks-changed",
+      handleBookmarkChange,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "lawsandjudgments:bookmarks-changed",
+        handleBookmarkChange,
+      );
+    };
+  }, [refreshBookmark]);
+
+  async function handleBookmark() {
+    if (bookmarking) {
+      return;
+    }
+
+    setBookmarking(true);
+
+    try {
+      const item: BookmarkItem = {
+        id: node.id,
+        type: "draft",
+        title: node.name,
+        source: "Laws & Judgments",
+        summary: `Legal draft document: ${node.name}`,
+        path: `/drafts?path=${encodeURIComponent(node.path)}`,
+        url: `/drafts?path=${encodeURIComponent(node.path)}`,
+      };
+
+      const next = await toggleBookmark(item);
+      setBookmarked(next);
+    } finally {
+      setBookmarking(false);
+    }
+  }
+
   async function handleDownload() {
     if (downloading) {
       return;
@@ -1111,6 +1698,35 @@ function DraftFile({
             Download
           </span>
         </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            void handleBookmark()
+          }
+          disabled={bookmarking}
+          title={
+            bookmarked
+              ? "Remove bookmark"
+              : "Bookmark draft"
+          }
+          aria-label={
+            bookmarked
+              ? `Remove bookmark from ${node.name}`
+              : `Bookmark ${node.name}`
+          }
+          aria-pressed={bookmarked}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+        >
+          <Bookmark
+            className="h-4 w-4"
+            fill={
+              bookmarked
+                ? "currentColor"
+                : "none"
+            }
+          />
+        </button>
       </div>
     </div>
   );
@@ -1127,6 +1743,67 @@ function SearchResultRow({
   result: SearchResult;
   onPreview: () => void;
 }) {
+  const [bookmarked, setBookmarked] =
+    React.useState(false);
+  const [bookmarking, setBookmarking] =
+    React.useState(false);
+
+  const refreshBookmark = React.useCallback(
+    async () => {
+      const value = await isBookmarked(
+        result.id,
+        "draft",
+      );
+      setBookmarked(value);
+    },
+    [result.id],
+  );
+
+  React.useEffect(() => {
+    void refreshBookmark();
+
+    const handleBookmarkChange = () => {
+      void refreshBookmark();
+    };
+
+    window.addEventListener(
+      "lawsandjudgments:bookmarks-changed",
+      handleBookmarkChange,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "lawsandjudgments:bookmarks-changed",
+        handleBookmarkChange,
+      );
+    };
+  }, [refreshBookmark]);
+
+  async function handleBookmark() {
+    if (bookmarking) {
+      return;
+    }
+
+    setBookmarking(true);
+
+    try {
+      const item: BookmarkItem = {
+        id: result.id,
+        type: "draft",
+        title: result.name,
+        source: "Laws & Judgments",
+        summary: `Legal draft document: ${result.name}`,
+        path: `/drafts?path=${encodeURIComponent(result.path)}`,
+        url: `/drafts?path=${encodeURIComponent(result.path)}`,
+      };
+
+      const next = await toggleBookmark(item);
+      setBookmarked(next);
+    } finally {
+      setBookmarking(false);
+    }
+  }
+
   return (
     <div className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-secondary/40">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -1156,6 +1833,35 @@ function SearchResultRow({
         <span className="hidden sm:inline">
           Preview
         </span>
+      </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          void handleBookmark()
+        }
+        disabled={bookmarking}
+        title={
+          bookmarked
+            ? "Remove bookmark"
+            : "Bookmark draft"
+        }
+        aria-label={
+          bookmarked
+            ? `Remove bookmark from ${result.name}`
+            : `Bookmark ${result.name}`
+        }
+        aria-pressed={bookmarked}
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+      >
+        <Bookmark
+          className="h-4 w-4"
+          fill={
+            bookmarked
+              ? "currentColor"
+              : "none"
+          }
+        />
       </button>
     </div>
   );

@@ -16,6 +16,17 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/providers/database/supabase";
+import {
+  trackBookmark,
+  trackContentView,
+  trackFeatureUse,
+  trackSearch,
+} from "@/services/analytics.service";
+import {
+  loadBookmarks,
+  toggleBookmark as togglePersistentBookmark,
+  type BookmarkItem,
+} from "@/lib/workspace/bookmarks";
 
 type ProcedureFile = {
   id: string;
@@ -256,25 +267,97 @@ export default function ProceduresPage() {
     }
   }
 
-  function toggleBookmark(fileId: string) {
-    setBookmarked((previous) => {
-      const next = new Set(previous);
+  const refreshBookmarks = React.useCallback(async () => {
+    try {
+      const items = await loadBookmarks();
+      const procedureIds = new Set(
+        items
+          .filter((item) => item.type === "procedure")
+          .map((item) => item.id),
+      );
 
-      if (next.has(fileId)) {
-        next.delete(fileId);
+      setBookmarked(procedureIds);
+    } catch (error) {
+      console.error("Procedure bookmark load error:", error);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void refreshBookmarks();
+
+    const handleBookmarkChange = () => {
+      void refreshBookmarks();
+    };
+
+    window.addEventListener(
+      "lawsandjudgments:bookmarks-changed",
+      handleBookmarkChange,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "lawsandjudgments:bookmarks-changed",
+        handleBookmarkChange,
+      );
+    };
+  }, [refreshBookmarks]);
+
+  async function toggleBookmark(fileId: string) {
+    const file = files.find((item) => item.id === fileId);
+
+    if (!file) {
+      return;
+    }
+
+    const wasBookmarked = bookmarked.has(fileId);
+
+    const item: BookmarkItem = {
+      id: file.id,
+      type: "procedure",
+      title: file.name,
+      source: "Laws & Judgments",
+      year: new Date().getFullYear().toString(),
+      summary: `Legal procedure document: ${file.name}`,
+      path: file.path,
+      url: file.url,
+    };
+
+    const next = await togglePersistentBookmark(item);
+
+    setBookmarked((previous) => {
+      const updated = new Set(previous);
+
+      if (next) {
+        updated.add(fileId);
       } else {
-        next.add(fileId);
+        updated.delete(fileId);
       }
 
-      return next;
+      return updated;
+    });
+
+    trackBookmark({
+      content_type: "procedure",
+      action: wasBookmarked ? "remove" : "add",
     });
   }
 
   function openFile(file: ProcedureFile) {
+    trackContentView({
+      content_type: "procedure",
+      file_extension: file.extension,
+    });
+
     window.open(file.url, "_blank", "noopener,noreferrer");
   }
 
   function downloadFile(file: ProcedureFile) {
+    trackFeatureUse({
+      feature: "procedure_download",
+      action: "download",
+      file_extension: file.extension,
+    });
+
     const link = document.createElement("a");
 
     link.href = file.url;
@@ -309,6 +392,19 @@ export default function ProceduresPage() {
       );
     });
   }, [tree, normalizedSearch]);
+
+  React.useEffect(() => {
+    if (!normalizedSearch || loading) return;
+
+    const timeout = window.setTimeout(() => {
+      trackSearch({
+        search_mode: "procedures",
+        result_count: filteredFiles.length,
+      });
+    }, 500);
+
+    return () => window.clearTimeout(timeout);
+  }, [normalizedSearch, filteredFiles.length, loading]);
 
   return (
     <main className="container-laws-and-judgments py-10 sm:py-12">
@@ -428,7 +524,7 @@ export default function ProceduresPage() {
                     file={file}
                     bookmarked={bookmarked.has(file.id)}
                     onBookmark={() =>
-                      toggleBookmark(file.id)
+                      void toggleBookmark(file.id)
                     }
                     onPreview={() => openFile(file)}
                     onDownload={() =>
@@ -488,7 +584,7 @@ export default function ProceduresPage() {
                     file.id
                   )}
                   onBookmark={() =>
-                    toggleBookmark(file.id)
+                    void toggleBookmark(file.id)
                   }
                   onPreview={() => openFile(file)}
                   onDownload={() =>
@@ -588,7 +684,7 @@ function ProcedureFolderRow({
                 file.id
               )}
               onBookmark={() =>
-                onBookmark(file.id)
+                void onBookmark(file.id)
               }
               onPreview={() => onPreview(file)}
               onDownload={() =>

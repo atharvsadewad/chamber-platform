@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   FolderKanban,
   Gavel,
@@ -12,6 +14,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
+import * as React from "react";
 
 import { supabase } from "@/providers/database/supabase";
 
@@ -48,9 +51,29 @@ const navigation = [
   },
 ];
 
+const STORAGE_KEY = "chamber:workspace-sidebar-collapsed";
+
 export function WorkspaceSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+
+  const [collapsed, setCollapsed] = React.useState(false);
+
+  React.useEffect(() => {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+
+    if (stored === "true") {
+      setCollapsed(true);
+    }
+  }, []);
+
+  function toggleCollapsed() {
+    setCollapsed((current) => {
+      const next = !current;
+      window.localStorage.setItem(STORAGE_KEY, String(next));
+      return next;
+    });
+  }
 
   async function handleSignOut() {
     try {
@@ -63,30 +86,70 @@ export function WorkspaceSidebar() {
   }
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r bg-card/50 md:block">
+    <aside
+      className={[
+        "hidden shrink-0 border-r bg-card/50 transition-[width] duration-200 ease-out md:block",
+        collapsed ? "w-[72px]" : "w-64",
+      ].join(" ")}
+    >
       <div className="sticky top-0 flex h-screen flex-col">
-        <div className="border-b px-6 py-5">
+        <div
+          className={[
+            "flex h-[69px] items-center border-b",
+            collapsed ? "justify-center px-2" : "justify-between px-4",
+          ].join(" ")}
+        >
           <Link
             href="/workspace"
-            className="flex items-center gap-2"
+            className="flex min-w-0 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            title={collapsed ? "Chamber Workspace" : undefined}
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <FolderKanban className="h-4 w-4" />
             </div>
 
-            <div>
-              <p className="text-sm font-semibold">
-                Chamber
-              </p>
-
-              <p className="text-xs text-muted-foreground">
-                Workspace
-              </p>
-            </div>
+            {!collapsed ? (
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">L&J</p>
+                <p className="text-xs text-muted-foreground">Workspace</p>
+              </div>
+            ) : null}
           </Link>
+
+          {!collapsed ? (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          ) : null}
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-5">
+        {collapsed ? (
+          <div className="flex justify-center border-b px-2 py-2">
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
+              className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
+
+        <nav
+          aria-label="Workspace navigation"
+          className={[
+            "flex-1 space-y-1 py-5",
+            collapsed ? "px-2" : "px-3",
+          ].join(" ")}
+        >
           {navigation.map((item) => {
             const Icon = item.icon;
 
@@ -99,27 +162,44 @@ export function WorkspaceSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                title={collapsed ? item.label : undefined}
+                aria-label={item.label}
+                className={[
+                  "flex h-10 items-center rounded-lg text-sm font-medium transition",
+                  collapsed
+                    ? "justify-center px-2"
+                    : "gap-3 px-3",
                   active
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                ].join(" ")}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <Icon className="h-4 w-4 shrink-0" />
+
+                {!collapsed ? <span>{item.label}</span> : null}
               </Link>
             );
           })}
         </nav>
 
-        <div className="border-t p-3">
+        <div
+          className={[
+            "border-t",
+            collapsed ? "p-2" : "p-3",
+          ].join(" ")}
+        >
           <button
             type="button"
             onClick={handleSignOut}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            title={collapsed ? "Sign out" : undefined}
+            aria-label="Sign out"
+            className={[
+              "flex h-10 w-full items-center rounded-lg text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
+              collapsed ? "justify-center px-2" : "gap-3 px-3",
+            ].join(" ")}
           >
-            <LogOut className="h-4 w-4" />
-            Sign out
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed ? <span>Sign out</span> : null}
           </button>
         </div>
       </div>

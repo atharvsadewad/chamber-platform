@@ -1,5 +1,5 @@
 import { Users } from "lucide-react";
-
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -16,6 +16,19 @@ interface AdminUser {
   email_confirmed_at: string | null;
   last_sign_in_at: string | null;
 }
+
+export const metadata: Metadata = {
+  title: "A | Users",
+  description: "Manage Laws & Judgments platform content, users and administration.",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
+};
 
 export default async function AdminUsersPage() {
   const { user: currentUser } = await requireAdmin();

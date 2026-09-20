@@ -8,13 +8,14 @@ import {
   Check,
   Scale,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import type { ResearchResult } from "./research-results";
+
 import {
   isBookmarked,
   toggleBookmark,
 } from "@/lib/workspace/bookmarks";
-import { useEffect, useState } from "react";
 
 interface SearchResultCardProps {
   result: ResearchResult;
@@ -25,13 +26,31 @@ export function SearchResultCard({
   result,
   onOpen,
 }: SearchResultCardProps) {
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] =
+    useState(false);
+
+  const [saving, setSaving] =
+    useState(false);
 
   useEffect(() => {
-    setSaved(isBookmarked(result.id));
+    let cancelled = false;
+
+    async function loadSavedState() {
+      const value =
+        await isBookmarked(
+          result.id,
+          result.type,
+        );
+
+      if (!cancelled) {
+        setSaved(value);
+      }
+    }
+
+    void loadSavedState();
 
     function handleChange() {
-      setSaved(isBookmarked(result.id));
+      void loadSavedState();
     }
 
     window.addEventListener(
@@ -40,27 +59,43 @@ export function SearchResultCard({
     );
 
     return () => {
+      cancelled = true;
+
       window.removeEventListener(
         "lawsandjudgments:bookmarks-changed",
         handleChange,
       );
     };
-  }, [result.id]);
+  }, [
+    result.id,
+    result.type,
+  ]);
 
-  function handleBookmark() {
-    const next = toggleBookmark({
-      id: result.id,
-      type: result.type,
-      title: result.title,
-      source: result.source,
-      year: result.year,
-      summary: result.summary,
-      section: result.section,
-      actName: result.actName,
-      actNumber: result.actNumber,
-    });
+  async function handleBookmark() {
+    if (saving) {
+      return;
+    }
 
-    setSaved(next);
+    setSaving(true);
+
+    try {
+      const next =
+        await toggleBookmark({
+          id: result.id,
+          type: result.type,
+          title: result.title,
+          source: result.source,
+          year: result.year,
+          summary: result.summary,
+          section: result.section,
+          actName: result.actName,
+          actNumber: result.actNumber,
+        });
+
+      setSaved(next);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const Icon =
@@ -122,14 +157,21 @@ export function SearchResultCard({
         <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
-            onClick={handleBookmark}
+            onClick={() =>
+              void handleBookmark()
+            }
+            disabled={saving}
             aria-label={
               saved
                 ? `Remove ${result.title} from saved items`
                 : `Save ${result.title}`
             }
-            title={saved ? "Saved" : "Save"}
-            className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+            title={
+              saved
+                ? "Saved"
+                : "Save"
+            }
+            className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:cursor-wait disabled:opacity-60 ${
               saved
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"

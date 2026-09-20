@@ -8,6 +8,7 @@ import {
   X,
   Sparkles,
   LogOut,
+  UserRound,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,37 @@ import { supabase } from "@/providers/database/supabase";
 const TOP_REVEAL_ZONE = 16;
 const SCROLL_HIDE_THRESHOLD = 8;
 
+type ProfileSummary = {
+  full_name: string | null;
+  avatar_url: string | null;
+  role: "user" | "admin";
+};
+
+function getInitials(
+  name: string | null,
+  email: string | null,
+) {
+  const source =
+    name?.trim() ||
+    email?.split("@")[0] ||
+    "U";
+
+  const parts = source
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (parts.length >= 2) {
+    const first = parts[0] ?? "";
+    const last = parts[parts.length - 1] ?? first;
+
+    return `${first.slice(0, 1)}${last.slice(0, 1)}`.toUpperCase();
+  }
+
+  return source
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -26,6 +58,10 @@ export function Navbar() {
   const [open, setOpen] = React.useState(false);
   const [authenticated, setAuthenticated] = React.useState(false);
   const [authLoading, setAuthLoading] = React.useState(true);
+  const [profile, setProfile] =
+    React.useState<ProfileSummary | null>(null);
+  const [email, setEmail] =
+    React.useState("");
   const [visible, setVisible] = React.useState(true);
 
   const lastScrollY = React.useRef(0);
@@ -38,6 +74,34 @@ export function Navbar() {
   React.useEffect(() => {
     let mounted = true;
 
+    async function loadProfile(
+      userId: string,
+    ) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(
+          "full_name, avatar_url, role",
+        )
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!mounted) return;
+
+      if (error) {
+        console.error(
+          "Navbar profile load error:",
+          error,
+        );
+        setProfile(null);
+        return;
+      }
+
+      setProfile(
+        (data as ProfileSummary | null) ??
+          null,
+      );
+    }
+
     async function loadSession() {
       const {
         data: { session },
@@ -46,6 +110,14 @@ export function Navbar() {
       if (!mounted) return;
 
       setAuthenticated(Boolean(session?.user));
+      setEmail(session?.user?.email ?? "");
+
+      if (session?.user) {
+        void loadProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+
       setAuthLoading(false);
     }
 
@@ -58,6 +130,14 @@ export function Navbar() {
         if (!mounted) return;
 
         setAuthenticated(Boolean(session?.user));
+        setEmail(session?.user?.email ?? "");
+
+        if (session?.user) {
+          void loadProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+
         setAuthLoading(false);
       },
     );
@@ -179,6 +259,8 @@ export function Navbar() {
       await supabase.auth.signOut();
 
       setAuthenticated(false);
+      setProfile(null);
+      setEmail("");
 
       router.replace("/");
       router.refresh();
@@ -186,6 +268,16 @@ export function Navbar() {
       console.error("Sign out error:", error);
     }
   }
+
+  const displayName =
+    profile?.full_name?.trim() ||
+    email.split("@")[0] ||
+    "Account";
+
+  const initials = getInitials(
+    profile?.full_name ?? null,
+    email,
+  );
 
   return (
     <div className="relative z-50 h-20">
@@ -273,7 +365,7 @@ export function Navbar() {
                   size="sm"
                   asChild
                 >
-                  <Link href="/auth/sign-up">
+                  <Link href="/auth/sign-in">
                     Open Workspace
                   </Link>
                 </Button>
@@ -282,6 +374,28 @@ export function Navbar() {
 
             {!authLoading && authenticated && (
               <>
+                <Link
+                  href="/profile"
+                  title="Profile & account"
+                  aria-label="Profile & account"
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border text-xs font-semibold transition",
+                    pathname.startsWith("/profile")
+                      ? "border-primary/30 bg-primary/10 text-primary"
+                      : "border-border bg-primary/10 text-primary hover:border-primary/30 hover:bg-primary/15",
+                  )}
+                >
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    initials
+                  )}
+                </Link>
+
                 <Button
                   variant="ghost"
                   size="sm"
@@ -397,7 +511,7 @@ export function Navbar() {
                         asChild
                       >
                         <Link
-                          href="/auth/sign-up"
+                          href="/auth/sign-in"
                           onClick={() =>
                             setOpen(false)
                           }
@@ -411,6 +525,37 @@ export function Navbar() {
                 {!authLoading &&
                   authenticated && (
                     <>
+                      <Link
+                        href="/profile"
+                        onClick={() =>
+                          setOpen(false)
+                        }
+                        className="flex items-center gap-3 rounded-lg border border-border px-4 py-3"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                          {profile?.avatar_url ? (
+                            <img
+                              src={profile.avatar_url}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            initials
+                          )}
+                        </span>
+
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">
+                            {displayName}
+                          </span>
+
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <UserRound className="h-3 w-3" />
+                            Profile & account
+                          </span>
+                        </span>
+                      </Link>
+
                       <Button
                         variant="outline"
                         asChild

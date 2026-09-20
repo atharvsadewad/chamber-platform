@@ -1,11 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Message = {
-  id: number;
+  id: string;
   role: "user" | "assistant";
   content: string;
+  created_at?: string;
+};
+
+type Conversation = {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
 };
 
 const suggestions = [
@@ -150,16 +160,160 @@ function MenuIcon() {
   );
 }
 
+function AssistantMarkdown({ content }: { content: string }) {
+  return (
+    <div className="text-[14px] leading-7 text-foreground">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => (
+            <h1 className="mb-4 mt-1 text-xl font-semibold tracking-tight text-foreground">
+              {children}
+            </h1>
+          ),
+
+          h2: ({ children }) => (
+            <h2 className="mb-3 mt-6 text-lg font-semibold tracking-tight text-foreground">
+              {children}
+            </h2>
+          ),
+
+          h3: ({ children }) => (
+            <h3 className="mb-2 mt-5 text-[15px] font-semibold text-foreground">
+              {children}
+            </h3>
+          ),
+
+          p: ({ children }) => (
+            <p className="mb-4 last:mb-0">
+              {children}
+            </p>
+          ),
+
+          strong: ({ children }) => (
+            <strong className="font-semibold text-foreground">
+              {children}
+            </strong>
+          ),
+
+          em: ({ children }) => (
+            <em className="italic">
+              {children}
+            </em>
+          ),
+
+          ul: ({ children }) => (
+            <ul className="mb-4 list-disc space-y-1.5 pl-6 last:mb-0">
+              {children}
+            </ul>
+          ),
+
+          ol: ({ children }) => (
+            <ol className="mb-4 list-decimal space-y-1.5 pl-6 last:mb-0">
+              {children}
+            </ol>
+          ),
+
+          li: ({ children }) => (
+            <li className="pl-1">
+              {children}
+            </li>
+          ),
+
+          blockquote: ({ children }) => (
+            <blockquote className="my-4 border-l-2 border-border pl-4 italic text-muted-foreground">
+              {children}
+            </blockquote>
+          ),
+
+          hr: () => (
+            <hr className="my-5 border-border" />
+          ),
+
+          a: ({ children, href }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-primary underline underline-offset-2 hover:opacity-80"
+            >
+              {children}
+            </a>
+          ),
+
+          code: ({ children, className }) => {
+            const isBlock = Boolean(className);
+
+            if (isBlock) {
+              return (
+                <code
+                  className={`${className} block overflow-x-auto rounded-lg bg-secondary p-4 text-xs leading-6`}
+                >
+                  {children}
+                </code>
+              );
+            }
+
+            return (
+              <code className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[12px]">
+                {children}
+              </code>
+            );
+          },
+
+          pre: ({ children }) => (
+            <pre className="mb-4 overflow-x-auto rounded-lg bg-secondary text-foreground">
+              {children}
+            </pre>
+          ),
+
+          table: ({ children }) => (
+            <div className="mb-4 overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                {children}
+              </table>
+            </div>
+          ),
+
+          thead: ({ children }) => (
+            <thead className="border-b border-border bg-secondary/50">
+              {children}
+            </thead>
+          ),
+
+          th: ({ children }) => (
+            <th className="px-3 py-2 text-left text-xs font-semibold text-foreground">
+              {children}
+            </th>
+          ),
+
+          td: ({ children }) => (
+            <td className="border-b border-border px-3 py-2 align-top text-sm">
+              {children}
+            </td>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 export default function AIPage() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
-  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const submittedQueryRef = useRef<string | null>(null);
+  const isSendingRef = useRef(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -178,18 +332,73 @@ export default function AIPage() {
     )}px`;
   }, [input]);
 
-  const sendMessage = async (text?: string) => {
+  const loadConversations = async () => {
+    try {
+      const response = await fetch("/api/ai", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Unable to load conversations.");
+      }
+
+      setConversations(data?.conversations ?? []);
+    } catch (error) {
+      console.error("Unable to load AI conversations:", error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const loadConversation = async (id: string) => {
+    if (isThinking || isLoadingHistory) return;
+
+    try {
+      const response = await fetch(`/api/ai?conversationId=${encodeURIComponent(id)}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Unable to load conversation.");
+      }
+
+      setConversationId(id);
+      setMessages(data?.messages ?? []);
+      setSidebarOpen(false);
+      setCopiedId(null);
+    } catch (error) {
+      console.error("Unable to load AI conversation:", error);
+    }
+  };
+
+  useEffect(() => {
+    void loadConversations();
+  }, []);
+
+  const sendMessage = async (text?: string, options?: { regenerate?: boolean }) => {
     const messageText = (text ?? input).trim();
 
-    if (!messageText || isThinking) return;
+    if (!messageText || isThinking || isSendingRef.current) return;
 
+    isSendingRef.current = true;
+
+    const optimisticId = crypto.randomUUID();
     const userMessage: Message = {
-      id: Date.now(),
+      id: optimisticId,
       role: "user",
       content: messageText,
     };
 
-    setMessages((previous) => [...previous, userMessage]);
+    if (!options?.regenerate) {
+      setMessages((previous) => [...previous, userMessage]);
+    }
+
     setInput("");
     setIsThinking(true);
 
@@ -201,6 +410,8 @@ export default function AIPage() {
         },
         body: JSON.stringify({
           message: messageText,
+          conversationId,
+          regenerate: Boolean(options?.regenerate),
         }),
       });
 
@@ -212,58 +423,49 @@ export default function AIPage() {
         );
       }
 
-      if (!data?.message) {
-        throw new Error("The AI returned an empty response.");
+      if (!data?.message || !data?.conversationId) {
+        throw new Error("The AI returned an incomplete response.");
       }
 
+      setConversationId(data.conversationId);
+
       const assistantMessage: Message = {
-        id: Date.now() + 1,
+        id: data.messageId ?? crypto.randomUUID(),
         role: "assistant",
         content: data.message,
+        created_at: data.createdAt,
       };
 
       setMessages((previous) => [
         ...previous,
         assistantMessage,
       ]);
+
+      await loadConversations();
     } catch (error) {
       console.error("AI chat error:", error);
 
+      if (!options?.regenerate) {
+        setMessages((previous) =>
+          previous.filter((message) => message.id !== optimisticId),
+        );
+      }
+
       const errorMessage: Message = {
-        id: Date.now() + 1,
+        id: crypto.randomUUID(),
         role: "assistant",
         content:
-          "I’m unable to generate a response right now. Please try again.",
+          error instanceof Error
+            ? error.message
+            : "Unable to generate an AI response. Please try again.",
       };
 
-      setMessages((previous) => [
-        ...previous,
-        errorMessage,
-      ]);
+      setMessages((previous) => [...previous, errorMessage]);
     } finally {
+      isSendingRef.current = false;
       setIsThinking(false);
     }
   };
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const query = params.get("q");
-    const shouldSend = params.get("send") === "1";
-
-    if (!query || !shouldSend) return;
-
-    const decodedQuery = query.trim();
-
-    if (!decodedQuery) return;
-    if (submittedQueryRef.current === decodedQuery) return;
-
-    submittedQueryRef.current = decodedQuery;
-
-    setInput(decodedQuery);
-    void sendMessage(decodedQuery);
-
-    window.history.replaceState({}, "", "/ai");
-  }, []);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -280,10 +482,14 @@ export default function AIPage() {
   };
 
   const startNewChat = () => {
+    if (isThinking) return;
+
+    setConversationId(null);
     setMessages([]);
     setInput("");
     setIsThinking(false);
     setCopiedId(null);
+    setSidebarOpen(false);
 
     setTimeout(() => {
       textareaRef.current?.focus();
@@ -323,12 +529,11 @@ export default function AIPage() {
       previous.filter((item) => item.id !== message.id),
     );
 
-    await sendMessage(previousUserMessage.content);
+    await sendMessage(previousUserMessage.content, { regenerate: true });
   };
 
   return (
     <div className="flex h-[calc(100vh-80px)] min-h-[600px] overflow-hidden bg-background text-foreground">
-      {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <button
           type="button"
@@ -338,7 +543,6 @@ export default function AIPage() {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex w-[270px] flex-col border-r border-border bg-secondary/30 transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -368,19 +572,26 @@ export default function AIPage() {
             Recent chats
           </p>
 
-          {messages.length > 0 ? (
-            <div className="mt-3">
-              <button
-                type="button"
-                className="w-full rounded-lg bg-secondary px-3 py-2.5 text-left text-sm text-foreground"
-              >
-                {messages.find((message) => message.role === "user")
-                  ?.content.slice(0, 32) || "Current conversation"}
-                {(messages.find((message) => message.role === "user")
-                  ?.content.length ?? 0) > 32
-                  ? "..."
-                  : ""}
-              </button>
+          {isLoadingHistory ? (
+            <p className="px-2 pt-3 text-xs leading-5 text-muted-foreground">
+              Loading conversations...
+            </p>
+          ) : conversations.length > 0 ? (
+            <div className="mt-3 space-y-1.5">
+              {conversations.map((conversation) => (
+                <button
+                  key={conversation.id}
+                  type="button"
+                  onClick={() => void loadConversation(conversation.id)}
+                  className={`w-full rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                    conversation.id === conversationId
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
+                  }`}
+                >
+                  <span className="block truncate">{conversation.title}</span>
+                </button>
+              ))}
             </div>
           ) : (
             <p className="px-2 pt-3 text-xs leading-5 text-muted-foreground">
@@ -402,9 +613,7 @@ export default function AIPage() {
         </div>
       </aside>
 
-      {/* Main chat */}
       <section className="flex min-w-0 flex-1 flex-col">
-        {/* Chat header */}
         <header className="flex h-[62px] shrink-0 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
             <button
@@ -441,7 +650,6 @@ export default function AIPage() {
           </button>
         </header>
 
-        {/* Messages */}
         <div className="min-h-0 flex-1 overflow-y-auto">
           {messages.length === 0 ? (
             <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center px-5 py-10 sm:px-8">
@@ -507,15 +715,13 @@ export default function AIPage() {
                         : "min-w-0 flex-1"
                     }`}
                   >
-                    <div
-                      className={`whitespace-pre-wrap text-[14px] leading-7 ${
-                        message.role === "user"
-                          ? "text-primary-foreground"
-                          : "text-foreground"
-                      }`}
-                    >
-                      {message.content}
-                    </div>
+                    {message.role === "assistant" ? (
+                      <AssistantMarkdown content={message.content} />
+                    ) : (
+                      <div className="whitespace-pre-wrap text-[14px] leading-7 text-primary-foreground">
+                        {message.content}
+                      </div>
+                    )}
 
                     {message.role === "assistant" && (
                       <div className="mt-3 flex items-center gap-1">
@@ -577,7 +783,6 @@ export default function AIPage() {
           )}
         </div>
 
-        {/* Composer */}
         <div className="shrink-0 bg-gradient-to-t from-background via-background to-transparent px-4 pb-4 pt-3 sm:px-6 sm:pb-5">
           <div className="mx-auto max-w-3xl">
             <form onSubmit={handleSubmit}>

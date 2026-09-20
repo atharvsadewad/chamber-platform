@@ -8,9 +8,20 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
+  Bookmark,
 } from "lucide-react";
 
 import { supabase } from "@/providers/database/supabase";
+import {
+  trackContentView,
+  trackSearch,
+} from "@/services/analytics.service";
+
+import {
+  isBookmarked,
+  toggleBookmark,
+  type BookmarkItem,
+} from "@/lib/workspace/bookmarks";
 
 type DictionaryEntry = {
   s_no: number;
@@ -48,6 +59,11 @@ export default function DictionaryPage() {
 
   const [selectedIndex, setSelectedIndex] =
     React.useState<number | null>(null);
+
+  const [bookmarked, setBookmarked] =
+    React.useState(false);
+  const [bookmarking, setBookmarking] =
+    React.useState(false);
 
   const totalPages = Math.max(
     1,
@@ -87,11 +103,11 @@ export default function DictionaryPage() {
    */
 
   const fetchDictionary = React.useCallback(
-    async (
-      pageNumber: number,
-      term: string,
-      letter: string | null
-    ) => {
+  async (
+    pageNumber: number,
+    term: string,
+    letter: string | null
+  ): Promise<number> => {
       const from =
         (pageNumber - 1) * PAGE_SIZE;
 
@@ -152,7 +168,7 @@ export default function DictionaryPage() {
         setEntries([]);
         setTotalCount(0);
 
-        return;
+        return 0;
       }
 
       setEntries(
@@ -161,7 +177,11 @@ export default function DictionaryPage() {
         )
       );
 
-      setTotalCount(count ?? 0);
+      const resultCount = count ?? 0;
+
+      setTotalCount(resultCount);
+      
+      return resultCount;
     },
     [sortEntries]
   );
@@ -318,11 +338,17 @@ export default function DictionaryPage() {
     setLoading(true);
     setError(null);
 
-    await fetchDictionary(
+    const resultCount = await fetchDictionary(
       1,
       "",
       letter
     );
+
+    trackSearch({
+      search_mode: "dictionary_alphabet",
+      result_count: resultCount,
+      letter,
+    });
 
     setLoading(false);
   };
@@ -370,9 +396,120 @@ export default function DictionaryPage() {
    * ---------------------------------------------------------
    */
 
+  React.useEffect(() => {
+    if (selectedIndex === null) {
+      setBookmarked(false);
+      return;
+    }
+
+    const entry = entries[selectedIndex];
+
+    if (!entry) {
+      setBookmarked(false);
+      return;
+    }
+
+    const entryId = String(entry.s_no);
+    let cancelled = false;
+
+    async function loadBookmarkState() {
+      const value = await isBookmarked(
+        entryId,
+        "dictionary",
+      );
+
+      if (!cancelled) {
+        setBookmarked(value);
+      }
+    }
+
+    void loadBookmarkState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedIndex, entries]);
+
+  React.useEffect(() => {
+    function handleBookmarkChange() {
+      if (selectedIndex === null) {
+        return;
+      }
+
+      const entry = entries[selectedIndex];
+
+      if (!entry) {
+        return;
+      }
+
+      const entryId = String(entry.s_no);
+
+      void isBookmarked(
+        entryId,
+        "dictionary",
+      ).then(setBookmarked);
+    }
+
+    window.addEventListener(
+      "lawsandjudgments:bookmarks-changed",
+      handleBookmarkChange,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "lawsandjudgments:bookmarks-changed",
+        handleBookmarkChange,
+      );
+    };
+  }, [selectedIndex, entries]);
+
+  async function handleBookmark() {
+    if (
+      bookmarking ||
+      selectedIndex === null
+    ) {
+      return;
+    }
+
+    const entry = entries[selectedIndex];
+
+    if (!entry) {
+      return;
+    }
+
+    setBookmarking(true);
+
+    try {
+      const item: BookmarkItem = {
+        id: String(entry.s_no),
+        type: "dictionary",
+        title: entry.word,
+        source: "Laws & Judgments",
+        summary: entry.meaning,
+        path: `/dictionary?term=${encodeURIComponent(entry.word)}`,
+        url: `/dictionary?term=${encodeURIComponent(entry.word)}`,
+      };
+
+      const next = await toggleBookmark(item);
+      setBookmarked(next);
+    } finally {
+      setBookmarking(false);
+    }
+  }
+
   const openEntry = (
     index: number
   ) => {
+    const entry = entries[index];
+
+    if (!entry) {
+      return;
+    }
+
+    trackContentView({
+      content_type: "dictionary_term",
+    });
+
     setSelectedIndex(index);
   };
 
@@ -886,16 +1023,47 @@ export default function DictionaryPage() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={
-                    closeEntry
-                  }
-                  aria-label="Close"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleBookmark()
+                    }
+                    disabled={bookmarking}
+                    title={
+                      bookmarked
+                        ? "Remove bookmark"
+                        : "Bookmark term"
+                    }
+                    aria-label={
+                      bookmarked
+                        ? `Remove bookmark from ${selectedEntry.word}`
+                        : `Bookmark ${selectedEntry.word}`
+                    }
+                    aria-pressed={bookmarked}
+                    className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <Bookmark
+                      className="h-5 w-5"
+                      fill={
+                        bookmarked
+                          ? "currentColor"
+                          : "none"
+                      }
+                    />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={
+                      closeEntry
+                    }
+                    aria-label="Close"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Meaning */}
