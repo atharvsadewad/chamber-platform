@@ -59,7 +59,7 @@ export function SocialLogin({
           type="button"
           className="w-full gap-2"
           onClick={handleGoogleSignIn}
-          disabled={loading}
+          disabled
         >
           <FcGoogle className="h-5 w-5" />
 
