@@ -1,6 +1,4 @@
-"use client";
-
-import { useState } from "react";
+import type { Metadata } from "next";
 
 import ResearchPage from "@/components/research/research-page";
 
