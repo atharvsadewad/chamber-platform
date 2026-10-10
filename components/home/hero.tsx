@@ -20,7 +20,7 @@ const SEARCH_OPTIONS = [
   },
   {
     label: "Legal Dictionary",
-    placeholder: "Search legal terms, e.g. abetment...",
+    placeholder: "Search legal terms, e.g. Abatement...",
     href: "/dictionary",
   },
 ] as const;

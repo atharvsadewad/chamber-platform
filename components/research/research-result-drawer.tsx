@@ -420,108 +420,83 @@ export function ResearchResultDrawer({
    * SECTION VIEW
    * ---------------------------------------------------------
    */
+  
   function renderSection() {
-    if (!section) {
-      return (
-        <div className="mt-7 rounded-xl border border-dashed border-border px-5 py-10 text-center">
-          <BookOpen className="mx-auto h-7 w-7 text-muted-foreground" />
-
-          <h2 className="mt-3 font-serif text-xl font-semibold">
-            Section unavailable
-          </h2>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            The section record could not be loaded.
-          </p>
-        </div>
-      );
-    }
-
+  if (!section) {
     return (
-      <>
-        {viewingSectionFromAct && (
-          <button
-            type="button"
-            onClick={backToAct}
-            className="mb-5 inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Act
-          </button>
-        )}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-            <BookOpen className="h-3.5 w-3.5" />
-            Section {section.section || "—"}
-          </span>
-        </div>
-
-        <h1 className="mt-5 font-serif text-3xl font-bold leading-tight tracking-tight text-foreground">
-          {section.title ||
-            `Section ${section.section || "—"}`}
-        </h1>
-
-        {act?.act_name && (
-          <p className="mt-3 text-sm font-medium text-primary">
-            {act.act_name}
-          </p>
-        )}
-
-        {act?.year && (
-          <div className="mt-5 flex items-center gap-2 text-sm text-muted-foreground">
-            <CalendarDays className="h-4 w-4" />
-            {act.year}
-          </div>
-        )}
-
-        {section.description && (
-          <div className="mt-7 rounded-xl border border-border bg-card p-5">
-            <h2 className="font-serif text-xl font-semibold">
-              Description
-            </h2>
-
-            <p className="mt-3 text-sm leading-7 text-muted-foreground">
-              {section.description}
-            </p>
-          </div>
-        )}
-
-        <div className="mt-5 rounded-xl border border-border bg-card p-5 sm:p-6">
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" />
-
-            <h2 className="font-serif text-xl font-semibold">
-              Provision
-            </h2>
-          </div>
-
-          {section.content ? (
-            <div className="mt-5 whitespace-pre-wrap text-sm leading-8 text-foreground sm:text-base">
-              {section.content}
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-muted-foreground">
-              The provision text is not available in the
-              current record.
-            </p>
-          )}
-        </div>
-
-        {act?.source_url && (
-          <a
-            href={act.source_url}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-          >
-            View official Act source
-            <ExternalLink className="h-4 w-4" />
-          </a>
-        )}
-      </>
+      <div className="mt-7 rounded-xl border border-dashed border-border px-5 py-10 text-center">
+        <BookOpen className="mx-auto h-7 w-7 text-muted-foreground" />
+        <h2 className="mt-3 font-serif text-xl font-semibold">
+          Section unavailable
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The section record could not be loaded.
+        </p>
+      </div>
     );
   }
+
+  return (
+    <>
+      {viewingSectionFromAct && (
+        <button
+          type="button"
+          onClick={backToAct}
+          className="mb-5 inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Act
+        </button>
+      )}
+
+      {/* Removed duplicated badge, title, and year elements from here */}
+
+      {section.description && (
+        <div className="mt-7 rounded-xl border border-border bg-card p-5">
+          <h2 className="font-serif text-xl font-semibold">
+            Description
+          </h2>
+
+          <p className="mt-3 text-sm leading-7 text-muted-foreground">
+            {section.description}
+          </p>
+        </div>
+      )}
+
+      <div className="mt-5 rounded-xl border border-border bg-card p-5 sm:p-6">
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-primary" />
+
+          <h2 className="font-serif text-xl font-semibold">
+            Provision
+          </h2>
+        </div>
+
+        {section.content ? (
+          <div className="mt-5 whitespace-pre-wrap text-sm leading-8 text-foreground sm:text-base">
+            {section.content}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">
+            The provision text is not available in the current record.
+          </p>
+        )}
+      </div>
+
+      {act?.source_url && (
+        <a
+          href={act.source_url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+        >
+          View official Act source
+          <ExternalLink className="h-4 w-4" />
+        </a>
+      )}
+    </>
+  );
+}
 
   /*
    * ---------------------------------------------------------
